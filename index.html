@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#5B4EE8">
+<title>CreatiBox — Central</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --violeta:#5B4EE8; --violeta-osc:#4A3FD0; --violeta-claro:#ECEAFB;
+  --amarillo:#FFE14D; --amarillo-osc:#F5C518;
+  --tinta:#1A1B2E; --gris:#6B6B7B; --gris-claro:#9B9BAB;
+  --linea:#EDEDF2; --fondo:#F7F7FB; --blanco:#FFFFFF;
+  --verde:#22B573; --verde-claro:#E4F7EF; --rojo:#E5484D; --rojo-claro:#FCEBEC;
+  --azul:#3B82F6; --naranja:#F59E0B; --naranja-claro:#FEF3E2;
+  --radius:20px; --radius-sm:14px;
+  --sombra:0 1px 3px rgba(26,27,46,.06),0 4px 16px rgba(26,27,46,.05);
+  --sombra-lg:0 4px 24px rgba(91,78,232,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--fondo);color:var(--tinta);min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:1rem;width:100%;padding:13px 15px;border:1.5px solid var(--linea);border-radius:var(--radius-sm);background:var(--blanco);color:var(--tinta);transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--violeta)}
+label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14px 0 6px}
+.oculto{display:none!important}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#D8D8E0;border-radius:4px}
+
+/* ===== Layout general ===== */
+.app{display:flex;min-height:100vh}
+/* Sidebar desktop */
+.sidebar{width:240px;background:var(--blanco);border-right:1px solid var(--linea);padding:22px 14px;position:fixed;top:0;bottom:0;left:0;z-index:30;display:flex;flex-direction:column;gap:4px}
+.sidebar .marca{display:flex;align-items:center;gap:10px;padding:6px 10px 20px}
+.sidebar .marca .logo{width:38px;height:38px;border-radius:11px;background:var(--violeta);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem}
+.sidebar .marca .txt{font-weight:800;font-size:1.15rem}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);font-size:.92rem;font-weight:600;color:var(--gris);text-align:left;width:100%;transition:all .15s}
+.nav-item .ic{width:22px;text-align:center;font-size:1.1rem;flex-shrink:0}
+.nav-item:hover{background:var(--fondo)}
+.nav-item.activo{background:var(--violeta);color:#fff}
+.sidebar .abajo{margin-top:auto;padding-top:12px;border-top:1px solid var(--linea)}
+
+/* Main */
+.main{flex:1;margin-left:240px;padding:26px 30px 40px;max-width:1180px}
+.topbar-desk{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.topbar-desk h1{font-size:1.55rem;font-weight:800}
+.topbar-desk .sub{color:var(--gris);font-size:.88rem;margin-top:2px;font-weight:500}
+
+/* Bottom nav (móvil) */
+.botnav{display:none}
+
+/* ===== Tarjetas base ===== */
+.card{background:var(--blanco);border-radius:var(--radius);padding:22px;box-shadow:var(--sombra)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+
+/* KPI cards */
+.kpi{background:var(--blanco);border-radius:var(--radius);padding:20px;box-shadow:var(--sombra);position:relative;overflow:hidden}
+.kpi .ic-box{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:14px}
+.kpi .label{font-size:.82rem;color:var(--gris);font-weight:600}
+.kpi .valor{font-size:1.7rem;font-weight:800;margin-top:3px;letter-spacing:-.02em}
+.kpi .delta{font-size:.78rem;font-weight:600;margin-top:6px}
+.kpi .delta.up{color:var(--verde)} .kpi .delta.down{color:var(--rojo)}
+
+/* Botones */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 20px;border-radius:var(--radius-sm);font-weight:700;font-size:.95rem;transition:transform .1s,box-shadow .15s;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--violeta);color:#fff}
+.btn-primary:hover{box-shadow:var(--sombra-lg)}
+.btn-amarillo{background:var(--amarillo);color:var(--tinta)}
+.btn-ghost{background:var(--fondo);color:var(--tinta)}
+.btn-verde{background:var(--verde);color:#fff}
+.btn-wa{background:#25D366;color:#fff}
+.btn-outline{background:transparent;border:1.5px solid var(--linea);color:var(--tinta)}
+.btn-peligro{background:transparent;color:var(--rojo);font-weight:600}
+.btn-sm{padding:9px 14px;font-size:.85rem;border-radius:10px}
+.btn-block{width:100%}
+
+/* Chips / pills */
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;font-size:.72rem;font-weight:700}
+.pill.verde{background:var(--verde-claro);color:var(--verde)}
+.pill.rojo{background:var(--rojo-claro);color:var(--rojo)}
+.pill.naranja{background:var(--naranja-claro);color:var(--naranja)}
+.pill.violeta{background:var(--violeta-claro);color:var(--violeta)}
+
+/* Tabla */
+.tabla{width:100%;border-collapse:collapse}
+.tabla th{text-align:left;font-size:.75rem;color:var(--gris-claro);font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:10px 12px;border-bottom:1px solid var(--linea)}
+.tabla td{padding:13px 12px;border-bottom:1px solid var(--linea);font-size:.9rem;font-weight:500}
+.tabla tr:last-child td{border-bottom:none}
+.tabla tr.click{cursor:pointer}
+.tabla tr.click:hover td{background:var(--fondo)}
+
+/* Sección título */
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.sec-head h2{font-size:1.15rem;font-weight:700}
+.sec-head .link{color:var(--violeta);font-weight:600;font-size:.85rem}
+
+/* FAB */
+.fab{position:fixed;bottom:24px;right:24px;z-index:40;background:var(--violeta);color:#fff;border-radius:16px;padding:16px 22px;font-weight:700;box-shadow:var(--sombra-lg);display:flex;align-items:center;gap:8px}
+
+/* Modal / hoja */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(26,27,46,.5);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal.abierto{opacity:1;pointer-events:auto}
+.modal-panel{background:var(--blanco);border-radius:var(--radius);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:26px;transform:scale(.96);transition:transform .2s}
+.modal.abierto .modal-panel{transform:scale(1)}
+.modal-panel h2{font-size:1.3rem;font-weight:800;margin-bottom:4px}
+.modal-panel .msub{color:var(--gris);font-size:.85rem;margin-bottom:16px}
+.modal-close{position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:10px;background:var(--fondo);font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+
+/* Toast */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--tinta);color:#fff;padding:13px 24px;border-radius:999px;font-size:.88rem;font-weight:600;opacity:0;transition:all .25s;z-index:80;pointer-events:none}
+.toast.ver{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Cargando / login */
+.cargando{position:fixed;inset:0;z-index:90;background:var(--fondo);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spin{width:44px;height:44px;border:4px solid var(--violeta-claro);border-top-color:var(--violeta);border-radius:50%;animation:girar 1s linear infinite}
+@keyframes girar{to{transform:rotate(360deg)}}
+.login{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,var(--violeta),var(--violeta-osc));display:flex;align-items:center;justify-content:center;padding:24px}
+.login-box{background:var(--blanco);border-radius:24px;padding:34px 28px;width:100%;max-width:390px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.login-box .logo{width:56px;height:56px;border-radius:16px;background:var(--violeta);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.5rem;margin:0 auto 14px}
+.login-box h1{text-align:center;font-size:1.4rem;font-weight:800}
+.login-box .sub{text-align:center;color:var(--gris);font-size:.85rem;margin-bottom:8px}
+.login-err{color:var(--rojo);font-size:.82rem;text-align:center;margin-top:10px;min-height:1em}
+
+/* Steps cotizador */
+.stepper{display:flex;align-items:center;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.step-dot{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--gris-claro)}
+.step-dot .n{width:24px;height:24px;border-radius:50%;background:var(--linea);color:var(--gris);display:flex;align-items:center;justify-content:center;font-size:.75rem}
+.step-dot.activo .n{background:var(--violeta);color:#fff}
+.step-dot.hecho .n{background:var(--verde);color:#fff}
+.opt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px}
+.opt-card{border:2px solid var(--linea);border-radius:var(--radius-sm);padding:18px 16px;text-align:center;font-weight:700;font-size:.95rem;transition:all .15s;background:var(--blanco)}
+.opt-card:hover{border-color:var(--violeta-claro)}
+.opt-card.sel{border-color:var(--violeta);background:var(--violeta-claro)}
+.opt-card .emoji{font-size:1.7rem;display:block;margin-bottom:8px}
+.opt-card .desc{font-size:.75rem;color:var(--gris);font-weight:500;margin-top:4px}
+
+/* Resumen cotización */
+.quote-line{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--linea);font-size:.92rem}
+.quote-line.total{border-bottom:none;border-top:2px solid var(--tinta);margin-top:6px;padding-top:14px;font-weight:800;font-size:1.15rem}
+.badge-desc{background:var(--verde-claro);color:var(--verde);font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:999px}
+
+/* progress bar (abonos) */
+.progress{height:8px;border-radius:999px;background:var(--linea);overflow:hidden;margin:8px 0}
+.progress .fill{height:100%;background:var(--verde);border-radius:999px;transition:width .3s}
+
+/* Responsivo */
+@media(max-width:860px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:16px 16px 90px;max-width:100%}
+  .topbar-desk h1{font-size:1.3rem}
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:1fr}
+  .g2{grid-template-columns:1fr}
+  .botnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--blanco);border-top:1px solid var(--linea);padding:8px 4px 10px;justify-content:space-around}
+  .botnav .b{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.62rem;font-weight:600;color:var(--gris-claro);padding:4px 8px;flex:1}
+  .botnav .b .ic{font-size:1.25rem}
+  .botnav .b.activo{color:var(--violeta)}
+  .fab{bottom:78px;right:16px}
+  .tabla-wrap{overflow-x:auto}
+  .modal{align-items:flex-end;padding:0}
+  .modal-panel{max-width:100%;border-radius:24px 24px 0 0;max-height:92vh}
+}
+</style>
+</head>
+<body>
+<!-- Cargando -->
+<div class="cargando" id="cargando"><div class="spin"></div><div style="color:var(--gris);font-size:.9rem;font-weight:600">Cargando CreatiBox…</div></div>
+
+<!-- Login -->
+<div class="login oculto" id="vLogin">
+  <div class="login-box">
+    <div class="logo">CB</div>
+    <h1>CreatiBox</h1>
+    <div class="sub">Central de operaciones</div>
+    <label>Correo</label>
+    <input type="email" id="loginEmail" placeholder="tu@correo.com" autocomplete="username">
+    <label>Contraseña</label>
+    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    <div style="margin-top:20px"><button class="btn btn-primary btn-block" id="btnLogin">Entrar</button></div>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app oculto" id="app">
+  <!-- Sidebar (desktop) -->
+  <aside class="sidebar">
+    <div class="marca"><div class="logo">CB</div><div class="txt">CreatiBox</div></div>
+    <button class="nav-item activo" data-vista="dashboard"><span class="ic">◈</span> Resumen</button>
+    <button class="nav-item" data-vista="cotizar"><span class="ic">✦</span> Cotizar</button>
+    <button class="nav-item" data-vista="ventas"><span class="ic">💰</span> Ventas y Pedidos</button>
+    <button class="nav-item" data-vista="gastos"><span class="ic">📉</span> Gastos</button>
+    <button class="nav-item" data-vista="productos"><span class="ic">📦</span> Productos</button>
+    <button class="nav-item" data-vista="materia"><span class="ic">🧵</span> Materia Prima</button>
+    <button class="nav-item" data-vista="metricas"><span class="ic">📊</span> Métricas</button>
+    <div class="abajo">
+      <button class="nav-item" id="btnExcel"><span class="ic">⬇️</span> Exportar Excel</button>
+      <button class="nav-item" id="btnSalir"><span class="ic">⏻</span> Salir</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="main"></main>
+</div>
+
+<!-- Bottom nav (móvil) -->
+<nav class="botnav oculto" id="botnav">
+  <button class="b activo" data-vista="dashboard"><span class="ic">◈</span>Resumen</button>
+  <button class="b" data-vista="cotizar"><span class="ic">✦</span>Cotizar</button>
+  <button class="b" data-vista="ventas"><span class="ic">💰</span>Ventas</button>
+  <button class="b" data-vista="gastos"><span class="ic">📉</span>Gastos</button>
+  <button class="b" data-vista="metricas"><span class="ic">📊</span>Más</button>
+</nav>
+
+<!-- Modal genérico -->
+<div class="modal" id="modal"><div class="modal-panel" id="modalPanel"></div></div>
+
+<div class="toast" id="toast"></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const fmt = n => "$" + (Math.round(n)).toLocaleString("es-MX");
+const fmt2 = n => "$" + Number(n).toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
+const hoy = () => new Date().toISOString().slice(0,10);
+const fmtFecha = d => { if(!d) return "—"; const x=new Date(d+"T00:00:00"); return x.toLocaleDateString("es-MX",{day:"2-digit",month:"short"}); };
+
+/* =====================================================================
+   CATÁLOGO DE PRECIOS (de la Tabla Maestra 2026) — motor de cotización
+   ===================================================================== */
+const PRECIOS = {
+  estampado_multicolor: { // precio competitivo
+    "Playera Prime Adulto":170, "Playera Niño":135, "Sudadera":400, "Tote Bag":120,
+    "Costal de Yute":50, "Polo":230, "Deportiva 100% Poliéster":245
+  },
+  estampado_unicolor: {
+    "Playera Prime Adulto":140, "Playera Niño":120, "Sudadera":380, "Tote Bag":100,
+    "Costal de Yute":45, "Polo":220, "Deportiva 100% Poliéster":245
+  },
+  bordado: {
+    "Playera Prime Adulto":230, "Playera Niño":210, "Sudadera":400, "Tote Bag":140,
+    "Polo":250, "Camisa Manga Larga":390, "Camisa Manga Corta":360
+  },
+  sticker_plantilla: { "Papel Fotográfico":55, "Vinil Imprimible":65, "Vinil Holográfico":75, "Vinil Holográfico Laminado":85 },
+  paquete_basico: { "Papel Fotográfico":165, "Vinil Resistente al agua":195, "Vinil Holográfico":225, "Laminado (glitter/holo/transparente)":245 },
+  paquete_escolar: { "Papel Fotográfico":275, "Vinil Resistente al agua":325, "Vinil Holográfico":375, "Laminado (glitter/holo/transparente)":415 },
+  calcomania: { medidas:[5,10,15,20,25,30], precios:[[12,18,25,35,40,45],[18,26,40,50,55,60],[25,40,45,58,72,82],[35,50,58,72,100,110],[40,55,72,100,115,125],[45,60,82,110,125,130]] },
+  otros: { "Cake Topper":150, "Llavero de Acrílico identificador":50, "Llavero de Tablas o Vocales":100, "Libreta con Vinil":25 },
+  ponchado: 180, bordadoExtra:50, laminadoExtra:15,
+  // camisas limitadas a -10% en mayoreo; costal y stickers excluidos
+  mayoreoExcluido:["Costal de Yute"], mayoreoMax:{"Camisa Manga Larga":10,"Camisa Manga Corta":10}
+};
+// Mayoreo general: 10+ = -10%, 20+ = -15% (para prendas). Calcomanías: 10+ -10%, 20+ -20% (según tu excel)
+function descMayoreoPrenda(cant){ if(cant>=20) return 15; if(cant>=10) return 10; return 0; }
+function descMayoreoCalco(cant){ if(cant>=20) return 20; if(cant>=10) return 10; return 0; }
+
+/* =====================================================================
+   ESTADO GLOBAL
+   ===================================================================== */
+let productos=[], materia=[], ventas=[], gastos=[], pedidos=[], config={capitalInicial:0};
+let preciosOverride={}; // {grupo:{item:precio}} guardado en Firebase, pisa a PRECIOS
+function P(grupo,item){ if(preciosOverride[grupo]&&preciosOverride[grupo][item]!=null) return preciosOverride[grupo][item]; return PRECIOS[grupo]?.[item]; }
+function preciosDe(grupo){ // devuelve objeto combinado base+override para un grupo simple
+  const base={...(PRECIOS[grupo]||{})};
+  if(preciosOverride[grupo]) Object.assign(base,preciosOverride[grupo]);
+  return base;
+}
+let vistaActual="dashboard";
+let charts={};
+
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("ver"); setTimeout(()=>t.classList.remove("ver"),2500); }
+function abrirModal(html){ $("modalPanel").innerHTML = html; $("modal").classList.add("abierto"); }
+function cerrarModal(){ $("modal").classList.remove("abierto"); }
+$("modal").addEventListener("click", e=>{ if(e.target===$("modal")) cerrarModal(); });
+
+/* Capital acumulado en tiempo real */
+function capitalActual(){
+  let cap = config.capitalInicial||0;
+  const movs = [...ventas.map(v=>({f:v.fecha,m:pagosDe(v)})), ...gastos.map(g=>({f:g.fecha,m:-g.monto}))];
+  movs.forEach(x=> cap += x.m);
+  return cap;
+}
+function pagosDe(v){ return (v.pagos||[]).reduce((s,p)=>s+(+p.monto||0),0); }
+function totalPedido(v){ return +v.total||0; }
+function faltanteDe(v){ return Math.max(0, totalPedido(v)-pagosDe(v)); }
+
+/* =====================================================================
+   COTIZADOR — flujo por pasos
+   ===================================================================== */
+let coti = null; // estado de la cotización en curso
+
+const SERVICIOS = [
+  {id:"estampado", nombre:"Estampado", emoji:"🎨", desc:"Impresión multicolor o vinil 1 color"},
+  {id:"bordado", nombre:"Bordado", emoji:"🧵", desc:"Nombre, logo o escudo"},
+  {id:"sticker", nombre:"Stickers / Etiquetas", emoji:"🏷️", desc:"Plantillas y paquetes"},
+  {id:"calcomania", nombre:"Calcomanías", emoji:"🎯", desc:"Vinil de corte por tamaño"},
+  {id:"otros", nombre:"Otros productos", emoji:"🎁", desc:"Cake topper, llaveros, libretas"},
+];
+
+function iniciarCoti(){ coti = {servicio:null, opciones:{}, cant:1, extras:{}}; renderCotizar(); }
+
+function renderCotizar(){
+  const main = $("main");
+  if(!coti) coti = {servicio:null, opciones:{}, cant:1, extras:{}};
+  let cont = `<div class="topbar-desk"><div><h1>Cotizar</h1><div class="sub">Arma un precio en segundos y compártelo</div></div>
+    <button class="btn btn-ghost btn-sm" onclick="__reiniciarCoti()">↺ Reiniciar</button></div>`;
+
+  // Paso 1: servicio
+  if(!coti.servicio){
+    cont += `<div class="card"><div class="sec-head"><h2>¿Qué van a cotizar?</h2></div>
+      <div class="opt-grid">${SERVICIOS.map(s=>`<button class="opt-card" onclick="__cotiServicio('${s.id}')"><span class="emoji">${s.emoji}</span>${s.nombre}<div class="desc">${s.desc}</div></button>`).join("")}</div></div>`;
+    main.innerHTML = cont; return;
+  }
+
+  const svc = SERVICIOS.find(s=>s.id===coti.servicio);
+  cont += `<div class="card">`;
+  cont += renderStepper();
+  cont += `<div style="margin-top:8px">`;
+  if(coti.servicio==="estampado") cont += pasoEstampado();
+  else if(coti.servicio==="bordado") cont += pasoBordado();
+  else if(coti.servicio==="sticker") cont += pasoSticker();
+  else if(coti.servicio==="calcomania") cont += pasoCalcomania();
+  else if(coti.servicio==="otros") cont += pasoOtros();
+  cont += `</div></div>`;
+
+  // Resultado si está completa
+  const r = calcularCoti();
+  if(r){ cont += renderResultadoCoti(r); }
+  main.innerHTML = cont;
+  // rebind inputs dinámicos
+  document.querySelectorAll("[data-coti-cant]").forEach(el=>el.oninput=e=>{ coti.cant=Math.max(1,parseInt(e.target.value)||1); renderCotizar(); });
+}
+
+function renderStepper(){
+  const svc=SERVICIOS.find(s=>s.id===coti.servicio);
+  return `<div class="stepper"><div class="step-dot hecho"><span class="n">✓</span>${svc.nombre}</div></div>`;
+}
+
+/* ---- Estampado ---- */
+function pasoEstampado(){
+  let h = `<label>Técnica</label><div class="opt-grid">
+    <button class="opt-card ${coti.opciones.tecnica==='estampado_multicolor'?'sel':''}" onclick="__cotiOpc('tecnica','estampado_multicolor')"><span class="emoji">🌈</span>Multicolor<div class="desc">Impresión + corte + prensado</div></button>
+    <button class="opt-card ${coti.opciones.tecnica==='estampado_unicolor'?'sel':''}" onclick="__cotiOpc('tecnica','estampado_unicolor')"><span class="emoji">⬛</span>1 Color<div class="desc">Vinil textil</div></button>
+  </div>`;
+  if(coti.opciones.tecnica){
+    const prendas = Object.keys(PRECIOS[coti.opciones.tecnica]);
+    h += `<label>Prenda</label><select onchange="__cotiOpc('prenda',this.value)"><option value="">Elige…</option>${prendas.map(p=>`<option ${coti.opciones.prenda===p?'selected':''}>${p}</option>`).join("")}</select>`;
+  }
+  if(coti.opciones.prenda){
+    h += cantidadInput();
+    h += `<label>Número de estampados por prenda</label><select onchange="__cotiOpc('numEst',this.value)">
+      <option value="1" ${coti.opciones.numEst==='1'?'selected':''}>1 estampado</option>
+      <option value="2" ${coti.opciones.numEst==='2'?'selected':''}>2 estampados (frente + espalda/manga)</option></select>
+      <div style="font-size:.75rem;color:var(--gris);margin-top:6px">Cada estampado extra suma una hoja de material (~$32).</div>`;
+  }
+  return h;
+}
+/* ---- Bordado ---- */
+function pasoBordado(){
+  let h = `<label>Prenda</label><select onchange="__cotiOpc('prenda',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS.bordado).map(p=>`<option ${coti.opciones.prenda===p?'selected':''}>${p}</option>`).join("")}</select>`;
+  if(coti.opciones.prenda){
+    h += cantidadInput();
+    h += `<label>Tipo de bordado</label><div class="opt-grid">
+      <button class="opt-card ${coti.opciones.tipo==='nombre'?'sel':''}" onclick="__cotiOpc('tipo','nombre')"><span class="emoji">✍️</span>Nombre / Texto<div class="desc">Sencillo, dentro de 10×10cm</div></button>
+      <button class="opt-card ${coti.opciones.tipo==='logo'?'sel':''}" onclick="__cotiOpc('tipo','logo')"><span class="emoji">🛡️</span>Logo / Escudo<div class="desc">Complejo, puede requerir ponchado</div></button>
+    </div>`;
+    if(coti.opciones.tipo==='logo'){
+      h += `<div class="grid g2" style="margin-top:14px">
+        <div><label style="margin-top:0">¿Cobrar ponchado? (${fmt(PRECIOS.ponchado)})</label><select onchange="__cotiExtra('ponchado',this.value)"><option value="no" ${coti.extras.ponchado!=='si'?'selected':''}>No</option><option value="si" ${coti.extras.ponchado==='si'?'selected':''}>Sí, único por diseño</option></select></div>
+        <div><label style="margin-top:0">¿Excede 10×10cm? (+${fmt(PRECIOS.bordadoExtra)})</label><select onchange="__cotiExtra('extra',this.value)"><option value="no" ${coti.extras.extra!=='si'?'selected':''}>No</option><option value="si" ${coti.extras.extra==='si'?'selected':''}>Sí</option></select></div>
+      </div>`;
+    }
+  }
+  return h;
+}
+/* ---- Sticker ---- */
+function pasoSticker(){
+  let h = `<label>¿Plantilla suelta o paquete?</label><div class="opt-grid">
+    <button class="opt-card ${coti.opciones.modo==='plantilla'?'sel':''}" onclick="__cotiOpc('modo','plantilla')"><span class="emoji">🏷️</span>Plantilla suelta<div class="desc">Mínimo 2</div></button>
+    <button class="opt-card ${coti.opciones.modo==='paquete'?'sel':''}" onclick="__cotiOpc('modo','paquete')"><span class="emoji">📦</span>Paquete<div class="desc">Básico o Escolar</div></button></div>`;
+  if(coti.opciones.modo==='plantilla'){
+    h += `<label>Material</label><select onchange="__cotiOpc('material',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS.sticker_plantilla).map(m=>`<option ${coti.opciones.material===m?'selected':''}>${m}</option>`).join("")}</select>`;
+    if(coti.opciones.material){ coti.cant=Math.max(2,coti.cant); h += cantidadInput("Cantidad de plantillas (mín. 2)"); }
+  } else if(coti.opciones.modo==='paquete'){
+    h += `<label>Tipo de paquete</label><div class="opt-grid">
+      <button class="opt-card ${coti.opciones.paquete==='paquete_basico'?'sel':''}" onclick="__cotiOpc('paquete','paquete_basico')">Básico<div class="desc">~80 etiquetas</div></button>
+      <button class="opt-card ${coti.opciones.paquete==='paquete_escolar'?'sel':''}" onclick="__cotiOpc('paquete','paquete_escolar')">Escolar<div class="desc">~130 etiquetas</div></button></div>`;
+    if(coti.opciones.paquete){
+      h += `<label>Material</label><select onchange="__cotiOpc('material',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS[coti.opciones.paquete]).map(m=>`<option ${coti.opciones.material===m?'selected':''}>${m}</option>`).join("")}</select>`;
+      if(coti.opciones.material) h += cantidadInput("Cantidad de paquetes");
+    }
+  }
+  return h;
+}
+/* ---- Calcomanía ---- */
+function pasoCalcomania(){
+  const meds = PRECIOS.calcomania.medidas;
+  let h = `<div class="grid g2">
+    <div><label style="margin-top:0">Ancho</label><select onchange="__cotiOpc('ancho',this.value)">${meds.map(m=>`<option ${coti.opciones.ancho==m?'selected':''}>${m}</option>`).join("")}</select></div>
+    <div><label style="margin-top:0">Alto</label><select onchange="__cotiOpc('alto',this.value)">${meds.map(m=>`<option ${coti.opciones.alto==m?'selected':''}>${m}</option>`).join("")}</select></div>
+  </div>`;
+  h += cantidadInput("Cantidad de piezas");
+  return h;
+}
+/* ---- Otros ---- */
+function pasoOtros(){
+  let h = `<label>Producto</label><select onchange="__cotiOpc('producto',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS.otros).map(p=>`<option ${coti.opciones.producto===p?'selected':''}>${p}</option>`).join("")}</select>`;
+  if(coti.opciones.producto) h += cantidadInput();
+  return h;
+}
+function cantidadInput(label="Cantidad"){
+  return `<label>${label}</label><input type="number" min="1" value="${coti.cant}" data-coti-cant>`;
+}
+
+/* ---- CÁLCULO DE COTIZACIÓN ---- */
+function calcularCoti(){
+  const o=coti.opciones, c=coti.cant||1;
+  let base=null, etiqueta="", desc=0, descTipo="", extras=[], notas=[];
+  if(coti.servicio==="estampado"){
+    if(!o.tecnica||!o.prenda) return null;
+    base = P(o.tecnica,o.prenda);
+    etiqueta = `${o.prenda} — ${o.tecnica==='estampado_multicolor'?'Multicolor':'1 Color'}`;
+    if(o.numEst==='2'){ base += 32; extras.push(["2do estampado (+material)",32]); }
+    desc = descMayoreoPrenda(c);
+    if(PRECIOS.mayoreoExcluido.includes(o.prenda)) desc=0;
+  } else if(coti.servicio==="bordado"){
+    if(!o.prenda||!o.tipo) return null;
+    base = P("bordado",o.prenda);
+    etiqueta = `${o.prenda} — Bordado ${o.tipo==='nombre'?'Nombre/Texto':'Logo/Escudo'}`;
+    desc = descMayoreoPrenda(c);
+    const max = PRECIOS.mayoreoMax[o.prenda]; if(max && desc>max) desc=max;
+    if(o.tipo==='logo' && coti.extras.extra==='si'){ base += PRECIOS.bordadoExtra; extras.push(["Bordado extra (>10×10cm)",PRECIOS.bordadoExtra]); }
+  } else if(coti.servicio==="sticker"){
+    if(o.modo==='plantilla'){ if(!o.material) return null; base=P('sticker_plantilla',o.material); etiqueta=`Plantilla — ${o.material}`; notas.push("Mínimo 2 plantillas"); }
+    else if(o.modo==='paquete'){ if(!o.paquete||!o.material) return null; base=P(o.paquete,o.material); etiqueta=`Paquete ${o.paquete==='paquete_basico'?'Básico':'Escolar'} — ${o.material}`; }
+    else return null;
+  } else if(coti.servicio==="calcomania"){
+    if(!o.ancho||!o.alto) return null;
+    const meds=PRECIOS.calcomania.medidas; const ia=meds.indexOf(+o.ancho), ib=meds.indexOf(+o.alto);
+    base = PRECIOS.calcomania.precios[ib][ia];
+    etiqueta = `Calcomanía ${o.ancho}×${o.alto} cm`;
+    desc = descMayoreoCalco(c);
+    notas.push("Compra mínima $50");
+  } else if(coti.servicio==="otros"){
+    if(!o.producto) return null; base=P("otros",o.producto); etiqueta=o.producto;
+  }
+  if(base==null) return null;
+  const subtotal = base*c;
+  const montoDesc = subtotal*(desc/100);
+  let totalItems = subtotal - montoDesc;
+  // extras únicos (ponchado: una sola vez, no por pieza)
+  let extrasUnicos = 0;
+  if(coti.servicio==="bordado" && coti.extras.ponchado==='si'){ extrasUnicos += PRECIOS.ponchado; extras.push(["Ponchado (único por diseño)",PRECIOS.ponchado]); }
+  const total = totalItems + extrasUnicos;
+  return {etiqueta, base, cant:c, subtotal, desc, montoDesc, extras, total, notas};
+}
+
+function renderResultadoCoti(r){
+  let h = `<div class="card" style="margin-top:16px;border:2px solid var(--violeta)">
+    <div class="sec-head"><h2>💰 Cotización</h2><span class="pill violeta">${r.cant} pza${r.cant>1?'s':''}</span></div>
+    <div class="quote-line"><span>${r.etiqueta}</span><span>${fmt(r.base)} c/u</span></div>
+    <div class="quote-line"><span>Subtotal (${r.cant} × ${fmt(r.base)})</span><span>${fmt(r.subtotal)}</span></div>`;
+  if(r.desc>0) h += `<div class="quote-line"><span>Descuento mayoreo <span class="badge-desc">−${r.desc}%</span></span><span style="color:var(--verde)">−${fmt(r.montoDesc)}</span></div>`;
+  r.extras.forEach(e=>{ h += `<div class="quote-line"><span>${e[0]}</span><span>+${fmt(e[1])}</span></div>`; });
+  h += `<div class="quote-line total"><span>Total</span><span>${fmt(r.total)}</span></div>`;
+  if(r.notas.length) h += `<div style="font-size:.78rem;color:var(--gris);margin-top:10px">📌 ${r.notas.join(" · ")}</div>`;
+  h += `<div class="grid g3" style="margin-top:18px">
+      <button class="btn btn-wa" onclick="__cotiWhats()">📲 WhatsApp</button>
+      <button class="btn btn-primary" onclick="__cotiAPedido()">✓ Crear pedido</button>
+      <button class="btn btn-ghost" onclick="__cotiCopiar()">📋 Copiar precio</button>
+    </div></div>`;
+  return h;
+}
+
+// Handlers globales del cotizador
+window.__reiniciarCoti=()=>{ coti=null; iniciarCoti(); };
+window.__cotiServicio=(s)=>{ coti.servicio=s; coti.opciones={}; coti.extras={}; coti.cant=1; renderCotizar(); };
+window.__cotiOpc=(k,v)=>{ coti.opciones[k]=v; if(k==='tecnica'||k==='modo'||k==='paquete') { /* limpiar dependientes */ if(k==='modo'){coti.opciones.material=null;coti.opciones.paquete=null;} } renderCotizar(); };
+window.__cotiExtra=(k,v)=>{ coti.extras[k]=v; renderCotizar(); };
+function textoCoti(){
+  const r=calcularCoti(); if(!r) return "";
+  let l=[`*CreatiBox* 🧵`,``,`${r.etiqueta}`,`Cantidad: ${r.cant}`];
+  if(r.desc>0) l.push(`Precio unitario: ${fmt(r.base)} (con ${r.desc}% mayoreo)`);
+  else l.push(`Precio unitario: ${fmt(r.base)}`);
+  r.extras.forEach(e=>l.push(`+ ${e[0]}: ${fmt(e[1])}`));
+  l.push(``,`*Total: ${fmt(r.total)} MXN*`);
+  if(r.notas.length) l.push(``,r.notas.join(" · "));
+  return l.join("\n");
+}
+window.__cotiWhats=()=>{ const t=textoCoti(); if(t) window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank"); };
+window.__cotiCopiar=()=>{ const t=textoCoti(); navigator.clipboard?.writeText(t); toast("Precio copiado 📋"); };
+window.__cotiAPedido=()=>{ const r=calcularCoti(); if(r) modalNuevoPedido(r); };
+
+/* =====================================================================
+   VENTAS Y PEDIDOS (con abonos parciales)
+   ===================================================================== */
+function renderVentas(){
+  const main=$("main");
+  const abiertos = ventas.filter(v=>faltanteDe(v)>0.01).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const saldados = ventas.filter(v=>faltanteDe(v)<=0.01).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  let h = `<div class="topbar-desk"><div><h1>Ventas y Pedidos</h1><div class="sub">${ventas.length} pedidos · ${abiertos.length} con saldo pendiente</div></div>
+    <button class="btn btn-primary" onclick="__nuevoPedido()">＋ Nuevo pedido</button></div>`;
+
+  // KPIs rápidos
+  const totalCobrado = ventas.reduce((s,v)=>s+pagosDe(v),0);
+  const totalPorCobrar = ventas.reduce((s,v)=>s+faltanteDe(v),0);
+  h += `<div class="grid g3" style="margin-bottom:20px">
+    ${kpiMini("Total cobrado","💵",fmt(totalCobrado),"var(--verde-claro)")}
+    ${kpiMini("Por cobrar","⏳",fmt(totalPorCobrar),"var(--naranja-claro)")}
+    ${kpiMini("Pedidos abiertos","📋",abiertos.length,"var(--violeta-claro)")}
+  </div>`;
+
+  if(abiertos.length){
+    h += `<div class="card" style="margin-bottom:16px"><div class="sec-head"><h2>⏳ Pendientes de pago</h2></div>${tablaPedidos(abiertos)}</div>`;
+  }
+  h += `<div class="card"><div class="sec-head"><h2>✓ Saldados</h2></div>${saldados.length?tablaPedidos(saldados):'<div style="color:var(--gris);padding:10px">Aún no hay pedidos saldados.</div>'}</div>`;
+  main.innerHTML=h;
+}
+function kpiMini(label,ic,valor,bg){
+  return `<div class="kpi"><div class="ic-box" style="background:${bg}">${ic}</div><div class="label">${label}</div><div class="valor">${valor}</div></div>`;
+}
+function tablaPedidos(lista){
+  let h = `<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Folio</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Pagado</th><th>Falta</th><th></th></tr></thead><tbody>`;
+  lista.forEach(v=>{
+    const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
+    h += `<tr class="click" onclick="__verPedido('${v.id}')">
+      <td><b>${v.folio||'—'}</b></td><td>${v.cliente||'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.productos||'—'}</td>
+      <td>${fmt(v.total)}</td>
+      <td><div>${fmt(pag)}</div><div class="progress" style="width:70px"><div class="fill" style="width:${pct}%"></div></div></td>
+      <td>${falta>0.01?`<span class="pill naranja">${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`}</td>
+      <td style="color:var(--violeta);font-weight:700">›</td></tr>`;
+  });
+  return h+`</tbody></table></div>`;
+}
+
+window.__nuevoPedido=()=>modalNuevoPedido(null);
+function modalNuevoPedido(fromCoti){
+  const folio = "V-" + String(ventas.length+1).padStart(3,"0");
+  const prodPre = fromCoti ? `${fromCoti.cant}× ${fromCoti.etiqueta}` : "";
+  const totalPre = fromCoti ? Math.round(fromCoti.total) : "";
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
+    <h2>Nuevo pedido</h2><div class="msub">${fromCoti?'Desde tu cotización — revisa y guarda':'Registra un pedido y sus abonos'}</div>
+    <label>Folio</label><input id="pFolio" value="${folio}">
+    <label>Fecha</label><input type="date" id="pFecha" value="${hoy()}">
+    <label>Cliente</label><input id="pCliente" placeholder="Nombre del cliente">
+    <label>Productos / concepto</label><input id="pProd" value="${prodPre}" placeholder="Ej. 5 Sudaderas Estampadas">
+    <label>Detalles del pedido (opcional)</label><textarea id="pDet" rows="2" placeholder="Tallas, colores, notas de producción"></textarea>
+    <label>Precio total del pedido ($)</label><input type="number" id="pTotal" value="${totalPre}" placeholder="0">
+    <label>Referido por (opcional)</label><input id="pRef" placeholder="Ej. Karen">
+    <div style="background:var(--fondo);border-radius:14px;padding:14px;margin-top:16px">
+      <label style="margin-top:0">¿Recibiste un primer abono ya?</label>
+      <div class="grid g2"><input type="number" id="pAbono" placeholder="Monto ($)"><select id="pMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
+      <div style="font-size:.75rem;color:var(--gris);margin-top:8px">Déjalo vacío si aún no hay pago. Podrás agregar más abonos después.</div>
+    </div>
+    <div style="margin-top:20px"><button class="btn btn-primary btn-block" onclick="__guardarPedido()">Guardar pedido</button></div>`);
+}
+window.__guardarPedido=async()=>{
+  const total=parseFloat($("pTotal").value)||0;
+  const cliente=$("pCliente").value.trim();
+  if(!cliente){ toast("Ponle nombre al cliente"); return; }
+  const pagos=[]; const ab=parseFloat($("pAbono").value);
+  if(ab>0) pagos.push({monto:ab, metodo:$("pMetodo").value, fecha:$("pFecha").value});
+  const datos={ folio:$("pFolio").value.trim(), fecha:$("pFecha").value, cliente,
+    productos:$("pProd").value.trim(), detalles:$("pDet").value.trim(), total,
+    referido:$("pRef").value.trim()||null, pagos };
+  await addDoc(collection(db,"ventas"),datos);
+  cerrarModal(); toast("Pedido guardado ✓");
+};
+
+window.__verPedido=(id)=>{
+  const v=ventas.find(x=>x.id===id); if(!v) return;
+  const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
+  let pagosHtml = (v.pagos||[]).length ? v.pagos.map((p,i)=>`<div class="quote-line"><span>${fmtFecha(p.fecha)} · ${p.metodo}</span><span>${fmt(p.monto)} <button onclick="__borrarAbono('${id}',${i})" style="color:var(--rojo);margin-left:8px">✕</button></span></div>`).join("") : '<div style="color:var(--gris);font-size:.85rem;padding:6px 0">Sin abonos aún</div>';
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
+    <h2>${v.folio||'Pedido'}</h2><div class="msub">${v.cliente} · ${fmtFecha(v.fecha)}</div>
+    <div style="background:var(--fondo);border-radius:14px;padding:16px;margin-bottom:8px">
+      <div style="font-weight:600">${v.productos||'—'}</div>
+      ${v.detalles?`<div style="font-size:.82rem;color:var(--gris);margin-top:6px">${v.detalles}</div>`:''}
+      ${v.referido?`<div style="font-size:.78rem;margin-top:8px"><span class="pill violeta">Referido: ${v.referido}</span></div>`:''}
+    </div>
+    <div class="quote-line"><span>Total del pedido</span><span><b>${fmt(v.total)}</b></span></div>
+    <div class="quote-line"><span>Pagado</span><span style="color:var(--verde)">${fmt(pag)}</span></div>
+    <div class="progress"><div class="fill" style="width:${pct}%"></div></div>
+    <div class="quote-line"><span>Falta</span><span style="color:${falta>0.01?'var(--naranja)':'var(--verde)'}"><b>${fmt(falta)}</b></span></div>
+    <div style="margin-top:16px"><div style="font-weight:700;margin-bottom:6px">Abonos</div>${pagosHtml}</div>
+    ${falta>0.01?`<div style="background:var(--verde-claro);border-radius:14px;padding:14px;margin-top:14px">
+      <label style="margin-top:0">Registrar nuevo abono</label>
+      <div class="grid g2"><input type="number" id="nvAbono" placeholder="Monto ($)"><select id="nvMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
+      <button class="btn btn-verde btn-block" style="margin-top:10px" onclick="__agregarAbono('${id}')">＋ Agregar abono</button></div>`:'<div class="pill verde" style="margin-top:14px">✓ Pedido saldado completamente</div>'}
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-outline" style="flex:1" onclick="__editarPedido('${id}')">Editar</button>
+      <button class="btn btn-peligro" onclick="__borrarPedido('${id}')">Eliminar</button></div>`);
+};
+window.__agregarAbono=async(id)=>{
+  const v=ventas.find(x=>x.id===id); const m=parseFloat($("nvAbono").value);
+  if(!m||m<=0){ toast("Ingresa un monto válido"); return; }
+  const pagos=[...(v.pagos||[]),{monto:m,metodo:$("nvMetodo").value,fecha:hoy()}];
+  await updateDoc(doc(db,"ventas",id),{pagos});
+  toast("Abono registrado 💵"); __verPedido(id);
+};
+window.__borrarAbono=async(id,i)=>{
+  const v=ventas.find(x=>x.id===id); const pagos=[...(v.pagos||[])]; pagos.splice(i,1);
+  await updateDoc(doc(db,"ventas",id),{pagos}); __verPedido(id);
+};
+window.__borrarPedido=async(id)=>{ if(confirm("¿Eliminar este pedido?")){ await deleteDoc(doc(db,"ventas",id)); cerrarModal(); toast("Pedido eliminado"); } };
+window.__editarPedido=(id)=>{ const v=ventas.find(x=>x.id===id);
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Editar pedido</h2>
+    <label>Cliente</label><input id="ePCliente" value="${(v.cliente||'').replace(/"/g,'&quot;')}">
+    <label>Productos</label><input id="ePProd" value="${(v.productos||'').replace(/"/g,'&quot;')}">
+    <label>Detalles</label><textarea id="ePDet" rows="2">${v.detalles||''}</textarea>
+    <label>Total ($)</label><input type="number" id="ePTotal" value="${v.total||0}">
+    <div style="margin-top:18px"><button class="btn btn-primary btn-block" onclick="__guardarEdicionPedido('${id}')">Guardar cambios</button></div>`);
+};
+window.__guardarEdicionPedido=async(id)=>{
+  await updateDoc(doc(db,"ventas",id),{cliente:$("ePCliente").value.trim(),productos:$("ePProd").value.trim(),detalles:$("ePDet").value.trim(),total:parseFloat($("ePTotal").value)||0});
+  toast("Cambios guardados"); __verPedido(id);
+};
+window.__cerrar=cerrarModal;
+
+/* =====================================================================
+   GASTOS
+   ===================================================================== */
+const CAT_GASTO = ["Material","Herramienta/Equipo","Prendas base","Diseños/Licencias","Envíos","Publicidad","Otro"];
+function renderGastos(){
+  const main=$("main");
+  const lista=[...gastos].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const total=gastos.reduce((s,g)=>s+(+g.monto||0),0);
+  // por categoría
+  const porCat={}; gastos.forEach(g=>{porCat[g.categoria||"Otro"]=(porCat[g.categoria||"Otro"]||0)+(+g.monto||0);});
+  let h=`<div class="topbar-desk"><div><h1>Gastos</h1><div class="sub">${gastos.length} registros · ${fmt(total)} en total</div></div>
+    <button class="btn btn-primary" onclick="__nuevoGasto()">＋ Nuevo gasto</button></div>`;
+  h+=`<div class="grid g3" style="margin-bottom:20px">
+    ${kpiMini("Total gastado","📉",fmt(total),"var(--rojo-claro)")}
+    ${kpiMini("Este mes","📅",fmt(gastosMes(new Date())),"var(--naranja-claro)")}
+    ${kpiMini("Categorías","🗂️",Object.keys(porCat).length,"var(--violeta-claro)")}
+  </div>`;
+  h+=`<div class="card"><div class="sec-head"><h2>Historial</h2></div><div class="tabla-wrap"><table class="tabla">
+    <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Método</th><th>Monto</th><th></th></tr></thead><tbody>`;
+  if(!lista.length) h+=`<tr><td colspan="6" style="color:var(--gris)">Sin gastos aún.</td></tr>`;
+  lista.forEach(g=>{ h+=`<tr><td>${fmtFecha(g.fecha)}</td><td><b>${g.concepto||'—'}</b></td><td><span class="pill violeta">${g.categoria||'Otro'}</span></td><td>${g.metodo||'—'}</td><td style="color:var(--rojo);font-weight:700">−${fmt(g.monto)}</td><td><button onclick="__borrarGasto('${g.id}')" style="color:var(--rojo)">✕</button></td></tr>`; });
+  h+=`</tbody></table></div></div>`;
+  main.innerHTML=h;
+}
+function gastosMes(d){ const m=d.getMonth(),y=d.getFullYear(); return gastos.filter(g=>{if(!g.fecha)return false;const x=new Date(g.fecha+"T00:00:00");return x.getMonth()===m&&x.getFullYear()===y;}).reduce((s,g)=>s+(+g.monto||0),0); }
+window.__nuevoGasto=()=>{
+  const folio="G-"+String(gastos.length+1).padStart(3,"0");
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Nuevo gasto</h2><div class="msub">Registra una salida de dinero</div>
+    <label>Folio</label><input id="gFolio" value="${folio}">
+    <label>Fecha</label><input type="date" id="gFecha" value="${hoy()}">
+    <label>Concepto</label><input id="gConcepto" placeholder="Ej. Rollo de vinil textil">
+    <label>Categoría</label><select id="gCat">${CAT_GASTO.map(c=>`<option>${c}</option>`).join("")}</select>
+    <label>Método de pago</label><select id="gMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select>
+    <label>Monto ($)</label><input type="number" id="gMonto" placeholder="0">
+    <div style="margin-top:18px"><button class="btn btn-primary btn-block" onclick="__guardarGasto()">Guardar gasto</button></div>`);
+};
+window.__guardarGasto=async()=>{
+  const monto=parseFloat($("gMonto").value)||0;
+  if(monto<=0){ toast("Ingresa un monto válido"); return; }
+  await addDoc(collection(db,"gastos"),{folio:$("gFolio").value.trim(),fecha:$("gFecha").value,concepto:$("gConcepto").value.trim(),categoria:$("gCat").value,metodo:$("gMetodo").value,monto});
+  cerrarModal(); toast("Gasto registrado 📉");
+};
+window.__borrarGasto=async(id)=>{ if(confirm("¿Eliminar este gasto?")){ await deleteDoc(doc(db,"gastos",id)); toast("Gasto eliminado"); } };
+
+/* =====================================================================
+   PRODUCTOS (catálogo simple de referencia de precios)
+   ===================================================================== */
+function renderProductos(){
+  const main=$("main");
+  let h=`<div class="topbar-desk"><div><h1>Productos</h1><div class="sub">Precios que usa el cotizador · toca cualquiera para editar</div></div>
+    <div style="display:flex;gap:10px">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar de Excel<input type="file" id="impExcel" accept=".xlsx" style="display:none"></label>
+    </div></div>`;
+  const grupos=[
+    ["🎨 Estampado Multicolor","estampado_multicolor"],
+    ["🎨 Estampado 1 Color","estampado_unicolor"],
+    ["🧵 Bordado","bordado"],
+    ["🏷️ Stickers (plantilla)","sticker_plantilla"],
+    ["📦 Paquete Básico","paquete_basico"],
+    ["📦 Paquete Escolar","paquete_escolar"],
+    ["🎁 Otros","otros"],
+  ];
+  h+=`<div class="grid g2">`;
+  grupos.forEach(([titulo,gid])=>{
+    const obj=preciosDe(gid);
+    h+=`<div class="card"><div class="sec-head"><h2 style="font-size:1rem">${titulo}</h2></div><table class="tabla"><tbody>`;
+    Object.entries(obj).forEach(([k,v])=>{
+      const editado = preciosOverride[gid]&&preciosOverride[gid][k]!=null;
+      h+=`<tr class="click" onclick="__editarPrecio('${gid}','${k.replace(/'/g,"\\'")}')"><td>${k}${editado?' <span class="pill violeta" style="font-size:.6rem">editado</span>':''}</td><td style="text-align:right;font-weight:700">${fmt(v)} <span style="color:var(--violeta)">✎</span></td></tr>`;
+    });
+    h+=`</tbody></table></div>`;
+  });
+  h+=`</div>
+    <div class="card" style="margin-top:16px"><h2 style="font-size:1rem;margin-bottom:8px">🎯 Calcomanías (por tamaño)</h2>
+    <div class="tabla-wrap"><table class="tabla"><thead><tr><th>cm</th>${PRECIOS.calcomania.medidas.map(m=>`<th>${m}</th>`).join("")}</tr></thead><tbody>
+    ${PRECIOS.calcomania.medidas.map((m,i)=>`<tr><td><b>${m}</b></td>${PRECIOS.calcomania.precios[i].map(p=>`<td>${fmt(p)}</td>`).join("")}</tr>`).join("")}
+    </tbody></table></div><div style="font-size:.75rem;color:var(--gris);margin-top:8px">La matriz de calcomanías se edita en el código/Excel por ahora.</div></div>
+    <div style="font-size:.8rem;color:var(--gris);margin-top:14px;padding:0 4px">💡 <b>Editar:</b> toca un precio y cámbialo — se guarda para ti y Paola al instante. <b>Importar:</b> sube tu Tabla Maestra y jala los precios competitivos de la hoja "Resumen General" automáticamente.</div>`;
+  main.innerHTML=h;
+  $("impExcel").onchange=__importarExcel;
+}
+
+window.__editarPrecio=(gid,item)=>{
+  const actual=P(gid,item);
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Editar precio</h2>
+    <div class="msub">${item}</div>
+    <label>Precio de venta ($)</label><input type="number" id="epValor" value="${actual}" step="1">
+    <div style="font-size:.78rem;color:var(--gris);margin-top:8px">Se guardará en la nube y lo verán tú y Paola de inmediato. El cotizador usará este nuevo precio.</div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" style="flex:1" onclick="__guardarPrecio('${gid}','${item.replace(/'/g,"\\'")}')">Guardar</button>
+      ${preciosOverride[gid]&&preciosOverride[gid][item]!=null?`<button class="btn btn-ghost" onclick="__resetPrecio('${gid}','${item.replace(/'/g,"\\'")}')">Restaurar original</button>`:''}
+    </div>`);
+};
+window.__guardarPrecio=async(gid,item)=>{
+  const v=parseFloat($("epValor").value); if(isNaN(v)||v<0){toast("Precio inválido");return;}
+  const ov={...preciosOverride}; ov[gid]={...(ov[gid]||{})}; ov[gid][item]=v;
+  await setDoc(doc(db,"config","precios"),ov);
+  cerrarModal(); toast("Precio actualizado ✓");
+};
+window.__resetPrecio=async(gid,item)=>{
+  const ov={...preciosOverride}; if(ov[gid]){ov[gid]={...ov[gid]}; delete ov[gid][item];}
+  await setDoc(doc(db,"config","precios"),ov);
+  cerrarModal(); toast("Precio original restaurado");
+};
+
+/* Importar precios competitivos desde la Tabla Maestra (hoja Resumen General) */
+window.__importarExcel=(e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async(ev)=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:"binary"});
+      const ws=wb.Sheets["Resumen General"]; if(!ws){toast("No encontré la hoja 'Resumen General'");return;}
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+      // Recorremos por secciones marcadas con emojis; mapeamos nombre->precio competitivo (última col numérica útil)
+      const ov=JSON.parse(JSON.stringify(preciosOverride));
+      let grupo=null, cambios=0;
+      const mapCol={ // en cada sección, ¿en qué índice está el precio competitivo?
+        estampado_multicolor:3, estampado_unicolor:3, bordado:3
+      };
+      const alias={"Playera Prime Adulto":"Playera Prime Adulto","Playera Niño":"Playera Niño","Deportiva 100% Polyester":"Deportiva 100% Poliéster"};
+      for(const r of rows){
+        const c0=(r[0]||"").toString();
+        if(c0.includes("IMPRESION MULTICOLOR")){grupo="estampado_multicolor";continue;}
+        if(c0.includes("VINIL TEXTIL 1 COLOR")){grupo="estampado_unicolor";continue;}
+        if(c0.includes("BORDADO")&&!c0.includes("de escudo")){grupo="bordado";continue;}
+        if(c0.includes("STICKERS")||c0.includes("CALCOMAN")||c0.includes("OTROS")||c0.includes("LIBRETAS")){grupo=null;continue;}
+        if(!grupo) continue;
+        const col=mapCol[grupo]; const precio=r[col];
+        if(typeof precio==="number" && c0 && PRECIOS[grupo]){
+          const key=alias[c0]||c0;
+          if(PRECIOS[grupo][key]!=null){ ov[grupo]={...(ov[grupo]||{})}; ov[grupo][key]=precio; cambios++; }
+        }
+      }
+      if(!cambios){toast("No encontré precios para actualizar (revisa el formato)");return;}
+      await setDoc(doc(db,"config","precios"),ov);
+      toast(`${cambios} precios importados ✨`);
+    }catch(err){ console.error(err); toast("Error leyendo el Excel"); }
+  };
+  reader.readAsBinaryString(file);
+};
+
+function renderMateria(){
+  const main=$("main");
+  const lista=[...materia].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));
+  let h=`<div class="topbar-desk"><div><h1>Materia Prima</h1><div class="sub">${materia.length} insumos registrados</div></div>
+    <button class="btn btn-primary" onclick="__nuevoInsumo()">＋ Agregar insumo</button></div>`;
+  h+=`<div class="card"><div class="tabla-wrap"><table class="tabla"><thead><tr><th>Material</th><th>Costo paquete</th><th>Rendimiento</th><th>Costo unitario</th><th></th></tr></thead><tbody>`;
+  if(!lista.length) h+=`<tr><td colspan="5" style="color:var(--gris)">Sin insumos. Se cargan del catálogo inicial.</td></tr>`;
+  lista.forEach(m=>{ h+=`<tr class="click" onclick="__editarInsumo('${m.id}')"><td><b>${m.nombre}</b></td><td>${m.costoPaquete!=null?fmt2(m.costoPaquete):'—'}</td><td>${m.rendimiento||'—'}</td><td style="font-weight:700">${m.costoUnitario!=null?fmt2(m.costoUnitario):'—'}</td><td style="color:var(--violeta)">›</td></tr>`; });
+  h+=`</tbody></table></div></div>`;
+  main.innerHTML=h;
+}
+window.__nuevoInsumo=()=>modalInsumo(null);
+window.__editarInsumo=(id)=>modalInsumo(materia.find(m=>m.id===id));
+function modalInsumo(m){
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>${m?'Editar insumo':'Nuevo insumo'}</h2>
+    <label>Nombre</label><input id="mNombre" value="${m?(m.nombre||'').replace(/"/g,'&quot;'):''}">
+    <div class="grid g2"><div><label style="margin-top:0">Costo paquete ($)</label><input type="number" step="0.01" id="mCP" value="${m?m.costoPaquete??'':''}"></div>
+    <div><label style="margin-top:0">Costo unitario ($)</label><input type="number" step="0.01" id="mCU" value="${m?m.costoUnitario??'':''}"></div></div>
+    <label>Rendimiento</label><input id="mRend" value="${m?(m.rendimiento||''):''}" placeholder="Ej. 1 hoja por prenda">
+    <label>Notas</label><input id="mNotas" value="${m?(m.notas||''):''}">
+    <div style="display:flex;gap:10px;margin-top:18px"><button class="btn btn-primary" style="flex:1" onclick="__guardarInsumo('${m?m.id:''}')">Guardar</button>
+    ${m?`<button class="btn btn-peligro" onclick="__borrarInsumo('${m.id}')">Eliminar</button>`:''}</div>`);
+}
+window.__guardarInsumo=async(id)=>{
+  const datos={nombre:$("mNombre").value.trim(),costoPaquete:$("mCP").value===''?null:parseFloat($("mCP").value),costoUnitario:$("mCU").value===''?null:parseFloat($("mCU").value),rendimiento:$("mRend").value.trim()||null,notas:$("mNotas").value.trim()||null};
+  if(!datos.nombre){ toast("Ponle nombre"); return; }
+  if(id) await updateDoc(doc(db,"materiaPrima",id),datos); else await addDoc(collection(db,"materiaPrima"),datos);
+  cerrarModal(); toast("Insumo guardado 🧵");
+};
+window.__borrarInsumo=async(id)=>{ if(confirm("¿Eliminar insumo?")){ await deleteDoc(doc(db,"materiaPrima",id)); cerrarModal(); toast("Eliminado"); } };
+
+/* =====================================================================
+   DASHBOARD (Resumen)
+   ===================================================================== */
+function renderDashboard(){
+  const main=$("main");
+  const ahora=new Date();
+  const ingresoMes=ventas.reduce((s,v)=>s+(v.pagos||[]).filter(p=>mismoMes(p.fecha,ahora)).reduce((a,p)=>a+(+p.monto||0),0),0);
+  const gastoMes=gastosMes(ahora);
+  const porCobrar=ventas.reduce((s,v)=>s+faltanteDe(v),0);
+  const cap=capitalActual();
+  const abiertos=ventas.filter(v=>faltanteDe(v)>0.01);
+  const ultimasVentas=[...ventas].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).slice(0,5);
+
+  let h=`<div class="topbar-desk"><div><h1>Resumen</h1><div class="sub">${ahora.toLocaleDateString("es-MX",{weekday:'long',day:'numeric',month:'long'})}</div></div>
+    <button class="btn btn-primary" onclick="__irVista('cotizar')">✦ Cotización rápida</button></div>`;
+
+  h+=`<div class="grid g4" style="margin-bottom:20px">
+    ${kpiFull("Capital actual","🏦",fmt(cap),"var(--violeta-claro)","var(--violeta)")}
+    ${kpiFull("Ingresos del mes","💵",fmt(ingresoMes),"var(--verde-claro)","var(--verde)")}
+    ${kpiFull("Gastos del mes","📉",fmt(gastoMes),"var(--rojo-claro)","var(--rojo)")}
+    ${kpiFull("Por cobrar","⏳",fmt(porCobrar),"var(--naranja-claro)","var(--naranja)")}
+  </div>`;
+
+  h+=`<div class="grid g2" style="margin-bottom:20px">
+    <div class="card"><div class="sec-head"><h2>Ventas últimos 6 meses</h2></div><canvas id="chartVentas" height="180"></canvas></div>
+    <div class="card"><div class="sec-head"><h2>Ingresos vs Gastos (este mes)</h2></div><canvas id="chartIngGas" height="180"></canvas></div>
+  </div>`;
+
+  h+=`<div class="grid g2">
+    <div class="card"><div class="sec-head"><h2>Últimas ventas</h2><span class="link" onclick="__irVista('ventas')">Ver todas →</span></div>
+      ${ultimasVentas.length?`<table class="tabla"><tbody>${ultimasVentas.map(v=>`<tr class="click" onclick="__verPedido('${v.id}')"><td><b>${v.cliente||'—'}</b><div style="font-size:.75rem;color:var(--gris)">${v.productos||''}</div></td><td style="text-align:right"><b>${fmt(v.total)}</b><div style="font-size:.72rem">${faltanteDe(v)>0.01?`<span class="pill naranja">falta ${fmt(faltanteDe(v))}</span>`:`<span class="pill verde">saldado</span>`}</div></td></tr>`).join("")}</tbody></table>`:'<div style="color:var(--gris)">Aún no hay ventas.</div>'}
+    </div>
+    <div class="card"><div class="sec-head"><h2>⏳ Cuentas por cobrar</h2></div>
+      ${abiertos.length?`<table class="tabla"><tbody>${abiertos.slice(0,5).map(v=>`<tr class="click" onclick="__verPedido('${v.id}')"><td><b>${v.cliente}</b><div style="font-size:.75rem;color:var(--gris)">${v.folio||''}</div></td><td style="text-align:right;color:var(--naranja);font-weight:700">${fmt(faltanteDe(v))}</td></tr>`).join("")}</tbody></table>`:'<div style="color:var(--gris)">Todo saldado 🎉</div>'}
+    </div>
+  </div>`;
+  main.innerHTML=h;
+  setTimeout(()=>{ dibujarChartVentas("chartVentas"); dibujarIngGas("chartIngGas"); },30);
+}
+function kpiFull(label,ic,valor,bg,color){
+  return `<div class="kpi"><div class="ic-box" style="background:${bg};color:${color}">${ic}</div><div class="label">${label}</div><div class="valor">${valor}</div></div>`;
+}
+function mismoMes(fecha,d){ if(!fecha)return false; const x=new Date(fecha+"T00:00:00"); return x.getMonth()===d.getMonth()&&x.getFullYear()===d.getFullYear(); }
+
+function ingresosPorMes(nMeses){
+  const res=[]; const base=new Date();
+  for(let i=nMeses-1;i>=0;i--){
+    const d=new Date(base.getFullYear(),base.getMonth()-i,1);
+    const label=d.toLocaleDateString("es-MX",{month:"short"});
+    const val=ventas.reduce((s,v)=>s+(v.pagos||[]).filter(p=>mismoMes(p.fecha,d)).reduce((a,p)=>a+(+p.monto||0),0),0);
+    res.push({label,val});
+  }
+  return res;
+}
+function dibujarChartVentas(cid){
+  const el=$(cid); if(!el||!window.Chart)return; if(charts[cid])charts[cid].destroy();
+  const data=ingresosPorMes(6);
+  charts[cid]=new Chart(el,{type:"line",data:{labels:data.map(d=>d.label),datasets:[{data:data.map(d=>d.val),borderColor:"#5B4EE8",backgroundColor:"rgba(91,78,232,.1)",fill:true,tension:.35,borderWidth:3,pointBackgroundColor:"#5B4EE8",pointRadius:4}]},options:chartOpts()});
+}
+function dibujarIngGas(cid){
+  const el=$(cid); if(!el||!window.Chart)return; if(charts[cid])charts[cid].destroy();
+  const ahora=new Date();
+  const ing=ventas.reduce((s,v)=>s+(v.pagos||[]).filter(p=>mismoMes(p.fecha,ahora)).reduce((a,p)=>a+(+p.monto||0),0),0);
+  const gas=gastosMes(ahora);
+  charts[cid]=new Chart(el,{type:"bar",data:{labels:["Ingresos","Gastos"],datasets:[{data:[ing,gas],backgroundColor:["#22B573","#E5484D"],borderRadius:10,barThickness:60}]},options:chartOpts(true)});
+}
+function chartOpts(noGrid){
+  return {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{beginAtZero:true,grid:{color:"#EDEDF2"},ticks:{callback:v=>"$"+v.toLocaleString("es-MX")}},x:{grid:{display:false}}}};
+}
+
+/* =====================================================================
+   MÉTRICAS
+   ===================================================================== */
+function renderMetricas(){
+  const main=$("main");
+  const totalIngresos=ventas.reduce((s,v)=>s+pagosDe(v),0);
+  const totalGastos=gastos.reduce((s,g)=>s+(+g.monto||0),0);
+  const utilidad=totalIngresos-totalGastos;
+  const ticketProm=ventas.length?ventas.reduce((s,v)=>s+(+v.total||0),0)/ventas.length:0;
+
+  let h=`<div class="topbar-desk"><div><h1>Métricas</h1><div class="sub">Radiografía de CreatiBox</div></div></div>`;
+  h+=`<div class="grid g4" style="margin-bottom:20px">
+    ${kpiFull("Ingresos totales","💰",fmt(totalIngresos),"var(--verde-claro)","var(--verde)")}
+    ${kpiFull("Gastos totales","📉",fmt(totalGastos),"var(--rojo-claro)","var(--rojo)")}
+    ${kpiFull("Utilidad neta","📈",fmt(utilidad),"var(--violeta-claro)","var(--violeta)")}
+    ${kpiFull("Ticket promedio","🎫",fmt(ticketProm),"var(--naranja-claro)","var(--naranja)")}
+  </div>`;
+  h+=`<div class="grid g2" style="margin-bottom:20px">
+    <div class="card"><div class="sec-head"><h2>Ingresos por mes</h2></div><canvas id="mChartMes" height="200"></canvas></div>
+    <div class="card"><div class="sec-head"><h2>Gastos por categoría</h2></div><canvas id="mChartCat" height="200"></canvas></div>
+  </div>`;
+  h+=`<div class="grid g2">
+    <div class="card"><div class="sec-head"><h2>Métodos de pago (ventas)</h2></div><canvas id="mChartMetodo" height="200"></canvas></div>
+    <div class="card"><div class="sec-head"><h2>Top clientes</h2></div><div id="topClientes"></div></div>
+  </div>`;
+  main.innerHTML=h;
+  setTimeout(()=>{ dibujarMetricas(); },30);
+}
+function dibujarMetricas(){
+  // ingresos por mes
+  const im=ingresosPorMes(6);
+  crearChart("mChartMes","bar",im.map(d=>d.label),[{data:im.map(d=>d.val),backgroundColor:"#5B4EE8",borderRadius:8}]);
+  // gastos por categoría
+  const cat={}; gastos.forEach(g=>cat[g.categoria||"Otro"]=(cat[g.categoria||"Otro"]||0)+(+g.monto||0));
+  crearChartPie("mChartCat",Object.keys(cat),Object.values(cat));
+  // métodos de pago
+  const met={}; ventas.forEach(v=>(v.pagos||[]).forEach(p=>met[p.metodo||"Otro"]=(met[p.metodo||"Otro"]||0)+(+p.monto||0)));
+  crearChartPie("mChartMetodo",Object.keys(met),Object.values(met));
+  // top clientes
+  const cli={}; ventas.forEach(v=>cli[v.cliente||"—"]=(cli[v.cliente||"—"]||0)+pagosDe(v));
+  const top=Object.entries(cli).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  $("topClientes").innerHTML=top.length?`<table class="tabla"><tbody>${top.map(([c,v],i)=>`<tr><td><b>${i+1}.</b> ${c}</td><td style="text-align:right;font-weight:700">${fmt(v)}</td></tr>`).join("")}</tbody></table>`:'<div style="color:var(--gris)">Sin datos aún.</div>';
+}
+function crearChart(cid,type,labels,datasets){
+  const el=$(cid); if(!el||!window.Chart)return; if(charts[cid])charts[cid].destroy();
+  charts[cid]=new Chart(el,{type,data:{labels,datasets},options:chartOpts()});
+}
+function crearChartPie(cid,labels,data){
+  const el=$(cid); if(!el||!window.Chart)return; if(charts[cid])charts[cid].destroy();
+  charts[cid]=new Chart(el,{type:"doughnut",data:{labels,datasets:[{data,backgroundColor:["#5B4EE8","#22B573","#F59E0B","#E5484D","#3B82F6","#9B9BAB","#FFE14D"]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{padding:14,font:{size:11}}},tooltip:{callbacks:{label:c=>c.label+": "+fmt(c.parsed)}}}}});
+}
+
+/* =====================================================================
+   EXPORTAR EXCEL
+   ===================================================================== */
+function exportarExcel(){
+  const wb=XLSX.utils.book_new();
+  // Ventas
+  const fv=[["Folio","Fecha","Cliente","Productos","Detalles","Total","Pagado","Falta","Referido"]];
+  ventas.forEach(v=>fv.push([v.folio,v.fecha,v.cliente,v.productos,v.detalles,v.total,pagosDe(v),faltanteDe(v),v.referido||""]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(fv),"Ventas");
+  // Abonos detallados
+  const fa=[["Folio","Cliente","Fecha abono","Método","Monto"]];
+  ventas.forEach(v=>(v.pagos||[]).forEach(p=>fa.push([v.folio,v.cliente,p.fecha,p.metodo,p.monto])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(fa),"Abonos");
+  // Gastos
+  const fg=[["Folio","Fecha","Concepto","Categoría","Método","Monto"]];
+  gastos.forEach(g=>fg.push([g.folio,g.fecha,g.concepto,g.categoria,g.metodo,g.monto]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(fg),"Gastos");
+  // Materia prima
+  const fm=[["Material","Costo paquete","Rendimiento","Costo unitario","Notas"]];
+  materia.forEach(m=>fm.push([m.nombre,m.costoPaquete,m.rendimiento,m.costoUnitario,m.notas]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(fm),"Materia Prima");
+  // Resumen
+  const cap=capitalActual();
+  const fr=[["Concepto","Valor"],["Capital inicial",config.capitalInicial||0],["Ingresos totales",ventas.reduce((s,v)=>s+pagosDe(v),0)],["Gastos totales",gastos.reduce((s,g)=>s+(+g.monto||0),0)],["Capital actual",cap],["Por cobrar",ventas.reduce((s,v)=>s+faltanteDe(v),0)]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(fr),"Resumen");
+  XLSX.writeFile(wb,`CreatiBox_Central_${hoy()}.xlsx`);
+  toast("Excel descargado 📄");
+}
+
+/* =====================================================================
+   NAVEGACIÓN + ARRANQUE
+   ===================================================================== */
+const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,ventas:renderVentas,gastos:renderGastos,productos:renderProductos,materia:renderMateria,metricas:renderMetricas};
+function irVista(v){
+  vistaActual=v;
+  Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={};
+  document.querySelectorAll(".nav-item[data-vista]").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
+  document.querySelectorAll(".botnav .b").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
+  (VISTAS[v]||renderDashboard)();
+  window.scrollTo(0,0);
+}
+window.__irVista=irVista;
+document.querySelectorAll("[data-vista]").forEach(b=>b.onclick=()=>irVista(b.dataset.vista));
+$("btnExcel").onclick=exportarExcel;
+$("btnSalir").onclick=()=>{ if(confirm("¿Cerrar sesión?")) signOut(auth); };
+
+/* Seed inicial: materia prima + capital + ventas/gastos de arranque del Excel */
+async function sembrarSiVacio(){
+  const snap=await getDocs(collection(db,"materiaPrima"));
+  if(!snap.empty) return;
+  if(!confirm("Primera vez: ¿cargar los datos iniciales (materia prima, capital y movimientos de tu Excel)?")) return;
+  const batch=writeBatch(db);
+  const SEED_MAT=[["Hoja para estampado",16,"1 hoja por prenda",16],["Costal de yute",9,"1 pieza",9],["Tote bag (base)",20,"1 pieza",20],["Libreta (base)",28,"1 pieza",28],["Vinil impresión (stickers)",5,"1 hoja",5],["Papel fotográfico adhesivo 90g",2.31,"1 hoja",2.31],["Vinil holográfico adhesivo",3.71,"1 hoja",3.71],["Laminado holográfico",4,"1 pieza",4],["Vinil Textil (rollo 2m)",98,"0.5m por prenda",24.5],["Hilo de color bordado",580,"40 spools",14.5],["Estabilizador bordado",572,"46m",12.43],["Playera Prime Adulto c/IVA",42.92,"1 pieza",42.92],["Playera Niño c/IVA",32.48,"1 pieza",32.48],["Polo c/IVA",92.8,"1 pieza",92.8],["Sudadera c/IVA",158.92,"1 pieza",158.92],["Playera Deportiva Poliéster",70,"1 pieza",70]];
+  SEED_MAT.forEach(m=>batch.set(doc(collection(db,"materiaPrima")),{nombre:m[0],costoPaquete:m[1],rendimiento:m[2],costoUnitario:m[3],notas:null}));
+  batch.set(doc(db,"config","general"),{capitalInicial:44057});
+  // Gastos iniciales del Excel
+  const SEED_G=[["G-001","2026-05-29","Prensa Térmica","Herramienta/Equipo",2700],["G-002","2026-05-29","Cricut Maker 4","Herramienta/Equipo",8000],["G-003","2026-05-29","Brother L545","Herramienta/Equipo",9261],["G-004","2026-05-29","Amazon Material","Material",5615],["G-005","2026-05-29","Mercado Libre Material","Material",1554],["G-006","2026-05-29","Etsy Diseños Bordado","Diseños/Licencias",339.25],["G-007","2026-05-29","Etsy Diseños Bordado","Diseños/Licencias",244.92]];
+  SEED_G.forEach(g=>batch.set(doc(collection(db,"gastos")),{folio:g[0],fecha:g[1],concepto:g[2],categoria:g[3],metodo:"Transferencia",monto:g[4]}));
+  await batch.commit();
+  toast("Datos iniciales cargados ✨");
+}
+
+/* Sincronización en tiempo real */
+let subs=[];
+function escuchar(){
+  subs.forEach(u=>u()); subs=[];
+  const wire=(col,setter)=>subs.push(onSnapshot(collection(db,col),s=>{setter(s.docs.map(d=>({id:d.id,...d.data()}))); if(!$("app").classList.contains("oculto")) VISTAS[vistaActual]?.();},e=>{console.error(col,e);toast("Error: "+(e.code||e.message));}));
+  wire("ventas",d=>ventas=d);
+  wire("gastos",d=>gastos=d);
+  wire("materiaPrima",d=>materia=d);
+  subs.push(onSnapshot(doc(db,"config","general"),s=>{if(s.exists())config=s.data(); if(vistaActual==="dashboard"&&!$("app").classList.contains("oculto"))renderDashboard();}));
+  subs.push(onSnapshot(doc(db,"config","precios"),s=>{ preciosOverride = s.exists()?s.data():{}; if(!$("app").classList.contains("oculto")&&(vistaActual==="productos"||vistaActual==="cotizar")) VISTAS[vistaActual]?.(); }));
+}
+
+onAuthStateChanged(auth,async user=>{
+  $("cargando").classList.add("oculto");
+  if(user){
+    $("vLogin").classList.add("oculto"); $("app").classList.remove("oculto"); $("botnav").classList.remove("oculto");
+    escuchar();
+    await sembrarSiVacio();
+    irVista("dashboard");
+  } else {
+    $("vLogin").classList.remove("oculto"); $("app").classList.add("oculto"); $("botnav").classList.add("oculto");
+  }
+});
+$("btnLogin").onclick=async()=>{ $("loginErr").textContent=""; try{ await signInWithEmailAndPassword(auth,$("loginEmail").value.trim(),$("loginPass").value); }catch(e){ $("loginErr").textContent="Correo o contraseña incorrectos."; } };
+$("loginPass").addEventListener("keydown",e=>{ if(e.key==="Enter")$("btnLogin").click(); });
+window.addEventListener("unhandledrejection",e=>{ console.error("PROMESA",e.reason); });
+</script>
+</body>
+</html>
