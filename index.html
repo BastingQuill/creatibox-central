@@ -59,6 +59,7 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 
 /* ===== Tarjetas base ===== */
 .card{background:var(--blanco);border-radius:var(--radius);padding:22px;box-shadow:var(--sombra)}
+.chart-box{position:relative;height:200px;width:100%}
 .grid{display:grid;gap:16px}
 .g2{grid-template-columns:repeat(2,1fr)}
 .g3{grid-template-columns:repeat(3,1fr)}
@@ -200,11 +201,11 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
     <div class="marca"><div class="logo">CB</div><div class="txt">CreatiBox</div></div>
     <button class="nav-item activo" data-vista="dashboard"><span class="ic">◈</span> Resumen</button>
     <button class="nav-item" data-vista="cotizar"><span class="ic">✦</span> Cotizar</button>
-    <button class="nav-item" data-vista="ventas"><span class="ic">💰</span> Ventas y Pedidos</button>
+    <button class="nav-item" data-vista="pedidos"><span class="ic">🗂️</span> Pedidos</button>
+    <button class="nav-item" data-vista="ventas"><span class="ic">💰</span> Ventas</button>
     <button class="nav-item" data-vista="gastos"><span class="ic">📉</span> Gastos</button>
     <button class="nav-item" data-vista="productos"><span class="ic">📦</span> Productos</button>
     <button class="nav-item" data-vista="materia"><span class="ic">🧵</span> Materia Prima</button>
-    <button class="nav-item" data-vista="metricas"><span class="ic">📊</span> Métricas</button>
     <div class="abajo">
       <button class="nav-item" id="btnExcel"><span class="ic">⬇️</span> Exportar Excel</button>
       <button class="nav-item" id="btnSalir"><span class="ic">⏻</span> Salir</button>
@@ -219,9 +220,9 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 <nav class="botnav oculto" id="botnav">
   <button class="b activo" data-vista="dashboard"><span class="ic">◈</span>Resumen</button>
   <button class="b" data-vista="cotizar"><span class="ic">✦</span>Cotizar</button>
-  <button class="b" data-vista="ventas"><span class="ic">💰</span>Ventas</button>
+  <button class="b" data-vista="pedidos"><span class="ic">🗂️</span>Pedidos</button>
   <button class="b" data-vista="gastos"><span class="ic">📉</span>Gastos</button>
-  <button class="b" data-vista="metricas"><span class="ic">📊</span>Más</button>
+  <button class="b" data-vista="productos"><span class="ic">📦</span>Más</button>
 </nav>
 
 <!-- Modal genérico -->
@@ -305,6 +306,53 @@ function faltanteDe(v){ return Math.max(0, totalPedido(v)-pagosDe(v)); }
 /* =====================================================================
    COTIZADOR — flujo por pasos
    ===================================================================== */
+/* ---------- Costeo interno "¿Cómo se arma?" (por unidad) ----------
+   Basado en la Tabla Maestra: costos + margen 40% (25% camisas, 10% costal).
+   Solo se muestra a ustedes; NO se comparte en el WhatsApp del cliente. */
+const COSTOS = {
+  estampado_multicolor: {
+    "Playera Prime Adulto": [["Prenda (con IVA 16%)",42.92],["Hoja de estampado",32],["Mano de obra",29],["Indirectos (12%)",8.99]],
+    "Playera Niño":        [["Prenda (con IVA 16%)",32.48],["Hoja de estampado",32],["Mano de obra",29],["Indirectos (12%)",7.74]],
+    "Polo":                [["Prenda (con IVA 16%)",92.80],["Hoja de estampado",32],["Mano de obra",29],["Indirectos (12%)",14.98]],
+    "Sudadera":            [["Prenda (con IVA 16%)",158.92],["Hoja de estampado",32],["Mano de obra",29],["Indirectos (12%)",22.91]],
+    "Tote Bag":            [["Bolsa base (sin IVA)",20],["Hoja de estampado",32],["Mano de obra",29],["Indirectos (12%)",6.24]],
+    "Costal de Yute":      [["Costal base (sin IVA)",9],["Media hoja de estampado",8],["Mano de obra",29],["Indirectos (12%)",2.04]],
+    "Deportiva 100% Poliéster":[["Prenda poliéster",70],["Hoja de estampado",32],["Mano de obra",29],["Indirectos (12%)",7.34]],
+  },
+  estampado_unicolor: {
+    "Playera Prime Adulto":[["Prenda (con IVA 16%)",42.92],["Vinil textil",24.50],["Mano de obra",16.92],["Indirectos (12%)",8.09]],
+    "Playera Niño":        [["Prenda (con IVA 16%)",32.48],["Vinil textil",24.50],["Mano de obra",16.92],["Indirectos (12%)",6.84]],
+    "Polo":                [["Prenda (con IVA 16%)",92.80],["Vinil textil",24.50],["Mano de obra",29],["Indirectos (12%)",14.08]],
+    "Sudadera":            [["Prenda (con IVA 16%)",158.92],["Vinil textil",24.50],["Mano de obra",16.92],["Indirectos (12%)",22.01]],
+    "Tote Bag":            [["Bolsa base (sin IVA)",20],["Vinil textil",24.50],["Mano de obra",16.92],["Indirectos (12%)",5.34]],
+    "Costal de Yute":      [["Costal base (sin IVA)",9],["Vinil textil (½)",12.25],["Mano de obra",16.92],["Indirectos (12%)",2.55]],
+    "Deportiva 100% Poliéster":[["Prenda poliéster",70],["Vinil textil",24.50],["Mano de obra",29],["Indirectos (12%)",11.34]],
+  },
+  bordado: {
+    "Playera Prime Adulto":[["Prenda (con IVA 16%)",42.92],["Insumos bordado (hilo+estabilizador)",9.86],["Mano de obra",50.37],["Indirectos (12%)",6.33]],
+    "Playera Niño":        [["Prenda (con IVA 16%)",32.48],["Insumos bordado",9.86],["Mano de obra",50.37],["Indirectos (12%)",5.08]],
+    "Polo":                [["Prenda (con IVA 16%)",92.80],["Insumos bordado",9.86],["Mano de obra",50.37],["Indirectos (12%)",12.32]],
+    "Sudadera":            [["Prenda (con IVA 16%)",158.92],["Insumos bordado",9.86],["Mano de obra",50.37],["Indirectos (12%)",20.25]],
+    "Tote Bag":            [["Bolsa base (sin IVA)",20],["Insumos bordado",9.86],["Mano de obra",50.37],["Indirectos (12%)",3.58]],
+    "Camisa Manga Larga":  [["Prenda (con IVA 16%)",208.80],["Insumos bordado",9.86],["Mano de obra",50.37],["Indirectos (12%)",26.24]],
+    "Camisa Manga Corta":  [["Prenda (con IVA 16%)",183.28],["Insumos bordado",9.86],["Mano de obra",50.37],["Indirectos (12%)",23.18]],
+  },
+  sticker_plantilla: {
+    "Papel Fotográfico":[["Papel fotográfico adhesivo",2.31],["Tinta",0.11],["Mano de obra (30-60 min)",30],["Herramientas/desgaste",11.65]],
+    "Vinil Imprimible": [["Vinil imprimible",5],["Tinta",0.11],["Mano de obra (30-60 min)",30],["Herramientas/desgaste",11.65]],
+    "Vinil Holográfico":[["Vinil holográfico",3.71],["Tinta",0.11],["Mano de obra (30-60 min)",30],["Herramientas/desgaste",11.65]],
+    "Vinil Holográfico Laminado":[["Vinil holográfico",3.71],["Laminado",4],["Tinta",0.11],["Mano de obra (30-60 min)",30],["Herramientas/desgaste",11.65]],
+  },
+  otros: {
+    "Libreta con Vinil":[["Libreta base",14.50]],
+  },
+};
+function costoDe(grupo,item){
+  const desglose=COSTOS[grupo]?.[item]; if(!desglose) return null;
+  const total=desglose.reduce((s,x)=>s+x[1],0);
+  return {desglose,total};
+}
+
 let coti = null; // estado de la cotización en curso
 
 const SERVICIOS = [
@@ -344,6 +392,8 @@ function renderCotizar(){
   // Resultado si está completa
   const r = calcularCoti();
   if(r){ cont += renderResultadoCoti(r); }
+  // Carrito
+  cont += renderCarrito();
   main.innerHTML = cont;
   // rebind inputs dinámicos
   document.querySelectorAll("[data-coti-cant]").forEach(el=>el.oninput=e=>{ coti.cant=Math.max(1,parseInt(e.target.value)||1); renderCotizar(); });
@@ -438,6 +488,7 @@ function calcularCoti(){
     if(!o.tecnica||!o.prenda) return null;
     base = P(o.tecnica,o.prenda);
     etiqueta = `${o.prenda} — ${o.tecnica==='estampado_multicolor'?'Multicolor':'1 Color'}`;
+    var _c={grupo:o.tecnica,item:o.prenda};
     if(o.numEst==='2'){ base += 32; extras.push(["2do estampado (+material)",32]); }
     desc = descMayoreoPrenda(c);
     if(PRECIOS.mayoreoExcluido.includes(o.prenda)) desc=0;
@@ -445,12 +496,13 @@ function calcularCoti(){
     if(!o.prenda||!o.tipo) return null;
     base = P("bordado",o.prenda);
     etiqueta = `${o.prenda} — Bordado ${o.tipo==='nombre'?'Nombre/Texto':'Logo/Escudo'}`;
+    var _c={grupo:"bordado",item:o.prenda};
     desc = descMayoreoPrenda(c);
     const max = PRECIOS.mayoreoMax[o.prenda]; if(max && desc>max) desc=max;
     if(o.tipo==='logo' && coti.extras.extra==='si'){ base += PRECIOS.bordadoExtra; extras.push(["Bordado extra (>10×10cm)",PRECIOS.bordadoExtra]); }
   } else if(coti.servicio==="sticker"){
-    if(o.modo==='plantilla'){ if(!o.material) return null; base=P('sticker_plantilla',o.material); etiqueta=`Plantilla — ${o.material}`; notas.push("Mínimo 2 plantillas"); }
-    else if(o.modo==='paquete'){ if(!o.paquete||!o.material) return null; base=P(o.paquete,o.material); etiqueta=`Paquete ${o.paquete==='paquete_basico'?'Básico':'Escolar'} — ${o.material}`; }
+    if(o.modo==='plantilla'){ if(!o.material) return null; base=P('sticker_plantilla',o.material); etiqueta=`Plantilla — ${o.material}`; notas.push("Mínimo 2 plantillas"); var _c={grupo:'sticker_plantilla',item:o.material}; }
+    else if(o.modo==='paquete'){ if(!o.paquete||!o.material) return null; base=P(o.paquete,o.material); etiqueta=`Paquete ${o.paquete==='paquete_basico'?'Básico':'Escolar'} — ${o.material}`; var _c={grupo:o.paquete,item:o.material}; }
     else return null;
   } else if(coti.servicio==="calcomania"){
     if(!o.ancho||!o.alto) return null;
@@ -460,7 +512,7 @@ function calcularCoti(){
     desc = descMayoreoCalco(c);
     notas.push("Compra mínima $50");
   } else if(coti.servicio==="otros"){
-    if(!o.producto) return null; base=P("otros",o.producto); etiqueta=o.producto;
+    if(!o.producto) return null; base=P("otros",o.producto); etiqueta=o.producto; var _c={grupo:'otros',item:o.producto};
   }
   if(base==null) return null;
   const subtotal = base*c;
@@ -470,11 +522,33 @@ function calcularCoti(){
   let extrasUnicos = 0;
   if(coti.servicio==="bordado" && coti.extras.ponchado==='si'){ extrasUnicos += PRECIOS.ponchado; extras.push(["Ponchado (único por diseño)",PRECIOS.ponchado]); }
   const total = totalItems + extrasUnicos;
-  return {etiqueta, base, cant:c, subtotal, desc, montoDesc, extras, total, notas};
+  return {etiqueta, base, cant:c, subtotal, desc, montoDesc, extras, total, notas, _costeo: (typeof _c!=="undefined")?_c:null};
 }
 
 function renderResultadoCoti(r){
-  let h = `<div class="card" style="margin-top:16px;border:2px solid var(--violeta)">
+  // "¿Cómo se arma?" (interno)
+  let armado="";
+  if(r._costeo){
+    const c=costoDe(r._costeo.grupo,r._costeo.item);
+    if(c){
+      const utilidad = r.base - c.total;
+      const margen = r.base ? utilidad/r.base*100 : 0;
+      armado = `<div class="card" style="margin-top:16px;border:1.5px dashed var(--linea);background:#FAFAFC">
+        <div class="sec-head"><h2>🧵 ¿Cómo se arma? <span style="font-size:.7rem;color:var(--gris);font-weight:500;text-transform:none;letter-spacing:0">Solo para ustedes — no se comparte</span></h2></div>
+        ${c.desglose.map(d=>`<div class="quote-line"><span>${d[0]}</span><span>${fmt2(d[1])}</span></div>`).join("")}
+        <div class="quote-line total" style="border-top:1px solid var(--tinta);font-size:.95rem"><span>Costo unitario</span><span>${fmt2(c.total)}</span></div>
+        <div class="quote-line"><span>Precio de venta unitario</span><span><b>${fmt(r.base)}</b></span></div>
+        <div class="quote-line" style="border-bottom:none"><span>Utilidad por pieza</span><span style="color:${utilidad>0?'var(--verde)':'var(--rojo)'};font-weight:700">${fmt2(utilidad)} <span style="font-size:.75rem">(${margen.toFixed(0)}% margen)</span></span></div>
+      </div>`;
+    } else {
+      armado = `<div class="card" style="margin-top:16px;border:1.5px dashed var(--linea);background:#FAFAFC">
+        <div class="sec-head"><h2>🧵 ¿Cómo se arma?</h2></div>
+        <div style="color:var(--gris);font-size:.85rem">Este producto aún no tiene desglose de costeo detallado. Puedes agregarlo en la Tabla Maestra.</div>
+      </div>`;
+    }
+  }
+  // Recuadro de cotización
+  let h = armado + `<div class="card" style="margin-top:16px;border:2px solid var(--violeta)">
     <div class="sec-head"><h2>💰 Cotización</h2><span class="pill violeta">${r.cant} pza${r.cant>1?'s':''}</span></div>
     <div class="quote-line"><span>${r.etiqueta}</span><span>${fmt(r.base)} c/u</span></div>
     <div class="quote-line"><span>Subtotal (${r.cant} × ${fmt(r.base)})</span><span>${fmt(r.subtotal)}</span></div>`;
@@ -482,122 +556,252 @@ function renderResultadoCoti(r){
   r.extras.forEach(e=>{ h += `<div class="quote-line"><span>${e[0]}</span><span>+${fmt(e[1])}</span></div>`; });
   h += `<div class="quote-line total"><span>Total</span><span>${fmt(r.total)}</span></div>`;
   if(r.notas.length) h += `<div style="font-size:.78rem;color:var(--gris);margin-top:10px">📌 ${r.notas.join(" · ")}</div>`;
-  h += `<div class="grid g3" style="margin-top:18px">
-      <button class="btn btn-wa" onclick="__cotiWhats()">📲 WhatsApp</button>
-      <button class="btn btn-primary" onclick="__cotiAPedido()">✓ Crear pedido</button>
-      <button class="btn btn-ghost" onclick="__cotiCopiar()">📋 Copiar precio</button>
-    </div></div>`;
+  h += `<div style="margin-top:18px"><button class="btn btn-primary btn-block" onclick="__agregarAlCarrito()">🛒 Agregar a cotización</button>
+    <div style="font-size:.78rem;color:var(--gris);margin-top:8px;text-align:center">Puedes seguir agregando más productos al carrito antes de terminar.</div></div></div>`;
   return h;
 }
 
 // Handlers globales del cotizador
 window.__reiniciarCoti=()=>{ coti=null; iniciarCoti(); };
 window.__cotiServicio=(s)=>{ coti.servicio=s; coti.opciones={}; coti.extras={}; coti.cant=1; renderCotizar(); };
-window.__cotiOpc=(k,v)=>{ coti.opciones[k]=v; if(k==='tecnica'||k==='modo'||k==='paquete') { /* limpiar dependientes */ if(k==='modo'){coti.opciones.material=null;coti.opciones.paquete=null;} } renderCotizar(); };
+window.__cotiOpc=(k,v)=>{ coti.opciones[k]=v; if(k==='tecnica'||k==='modo'||k==='paquete') { if(k==='modo'){coti.opciones.material=null;coti.opciones.paquete=null;} } renderCotizar(); };
 window.__cotiExtra=(k,v)=>{ coti.extras[k]=v; renderCotizar(); };
-function textoCoti(){
-  const r=calcularCoti(); if(!r) return "";
-  let l=[`*CreatiBox* 🧵`,``,`${r.etiqueta}`,`Cantidad: ${r.cant}`];
-  if(r.desc>0) l.push(`Precio unitario: ${fmt(r.base)} (con ${r.desc}% mayoreo)`);
-  else l.push(`Precio unitario: ${fmt(r.base)}`);
-  r.extras.forEach(e=>l.push(`+ ${e[0]}: ${fmt(e[1])}`));
-  l.push(``,`*Total: ${fmt(r.total)} MXN*`);
-  if(r.notas.length) l.push(``,r.notas.join(" · "));
-  return l.join("\n");
+
+/* ===== Carrito de cotización ===== */
+let carrito = []; // [{etiqueta, cant, base, desc, montoDesc, extras, total, notas, _costeo}]
+
+window.__agregarAlCarrito=()=>{
+  const r=calcularCoti(); if(!r){ toast("Termina de armar el producto primero"); return; }
+  carrito.push(JSON.parse(JSON.stringify(r)));
+  coti=null;
+  toast(`Agregado al carrito ✓ (${carrito.length} producto${carrito.length>1?'s':''})`);
+  renderCotizar();
+};
+
+window.__eliminarDelCarrito=(i)=>{ carrito.splice(i,1); renderCotizar(); };
+
+window.__ajustarMayoreoItem=(i,pct)=>{
+  const item=carrito[i]; const p=+pct;
+  // recalcular con nuevo descuento (encima del base×cant, sin re-derivar del servicio)
+  item.desc=p;
+  item.montoDesc=item.subtotal*p/100;
+  // sumar extras únicos que ya venían (ponchado)
+  const extrasUnicos=item.extras.reduce((s,e)=>s+e[1],0) - (item.extras.filter(e=>!e[0].includes("único")).reduce((s,e)=>s+e[1],0));
+  // Simpler: total = subtotal - montoDesc + suma de extras "únicos" (los que suman una sola vez, no por pza)
+  // El motor original ya sumó los "por pieza" dentro de base. Los "únicos" son ponchado y bordado extra por unidad? En nuestro caso extras solo incluye "únicos" (ponchado) + "por pieza que ya está sumado al base" (extra bordado suma al base). Así que solo el ponchado va aquí.
+  const soloUnicos=item.extras.filter(e=>e[0].toLowerCase().includes("único")).reduce((s,e)=>s+e[1],0);
+  item.total = item.subtotal - item.montoDesc + soloUnicos;
+  renderCotizar();
+};
+
+function totalCarrito(){ return carrito.reduce((s,x)=>s+(+x.total||0),0); }
+function totalPiezasCarrito(){ return carrito.reduce((s,x)=>s+(+x.cant||0),0); }
+
+function renderCarrito(){
+  if(!carrito.length) return "";
+  let h = `<div class="card" style="margin-top:20px"><div class="sec-head"><h2>🛒 Carrito de cotización</h2><span class="pill violeta">${carrito.length} producto${carrito.length>1?'s':''} · ${totalPiezasCarrito()} pzas</span></div>`;
+  carrito.forEach((x,i)=>{
+    const c = x._costeo ? costoDe(x._costeo.grupo,x._costeo.item) : null;
+    const util = c ? (x.base - c.total) * x.cant : null;
+    h += `<div style="padding:14px 0;border-bottom:1px dashed var(--linea)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1"><div style="font-weight:700">${x.etiqueta}</div>
+          <div style="font-size:.82rem;color:var(--gris);margin-top:2px">${x.cant} × ${fmt(x.base)} c/u = ${fmt(x.subtotal)}</div>
+          ${x.desc>0?`<div style="font-size:.78rem;color:var(--verde);margin-top:2px">− ${x.desc}% mayoreo (${fmt(x.montoDesc)})</div>`:''}
+          ${x.extras.length?x.extras.map(e=>`<div style="font-size:.78rem;color:var(--gris)">+ ${e[0]}: ${fmt(e[1])}</div>`).join(''):''}
+          ${util!=null?`<div style="font-size:.72rem;color:${util>0?'var(--verde)':'var(--rojo)'};margin-top:4px">Utilidad interna: ${fmt2(util)}</div>`:''}
+        </div>
+        <div style="text-align:right"><div style="font-weight:800;font-size:1.05rem">${fmt(x.total)}</div>
+          <button onclick="__eliminarDelCarrito(${i})" style="color:var(--rojo);font-size:.78rem;font-weight:600;margin-top:6px">✕ Eliminar</button>
+        </div></div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:.72rem;color:var(--gris);font-weight:600">Mayoreo:</span>
+        ${[0,10,15,20].map(p=>`<button onclick="__ajustarMayoreoItem(${i},${p})" class="btn btn-sm" style="padding:5px 10px;font-size:.72rem;background:${x.desc===p?'var(--violeta)':'var(--fondo)'};color:${x.desc===p?'#fff':'var(--tinta)'}">${p===0?'Sin desc.':'−'+p+'%'}</button>`).join('')}
+      </div>
+    </div>`;
+  });
+  h += `<div style="display:flex;justify-content:space-between;padding:14px 0 4px;font-weight:800;font-size:1.2rem">
+    <span>Total cotización</span><span>${fmt(totalCarrito())}</span></div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="__terminarCotizacion()">Terminar cotización →</button></div>`;
+  return h;
 }
-window.__cotiWhats=()=>{ const t=textoCoti(); if(t) window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank"); };
-window.__cotiCopiar=()=>{ const t=textoCoti(); navigator.clipboard?.writeText(t); toast("Precio copiado 📋"); };
-window.__cotiAPedido=()=>{ const r=calcularCoti(); if(r) modalNuevoPedido(r); };
+
+function textoCotiCarritoParaCliente(){
+  let l=[`*CreatiBox* 🧵`,`Cotización de tu pedido:`,``];
+  carrito.forEach((x,i)=>{
+    l.push(`*${i+1}. ${x.etiqueta}*`);
+    l.push(`   ${x.cant} × ${fmt(x.base)} c/u = ${fmt(x.subtotal)}`);
+    if(x.desc>0) l.push(`   Mayoreo ${x.desc}%: −${fmt(x.montoDesc)}`);
+    x.extras.forEach(e=>l.push(`   + ${e[0]}: ${fmt(e[1])}`));
+    l.push(`   Subtotal: *${fmt(x.total)}*`);
+    if(x.notas.length) l.push(`   📌 ${x.notas.join(' · ')}`);
+    l.push('');
+  });
+  l.push(`━━━━━━━━━━━━━━`);
+  l.push(`*Total: ${fmt(totalCarrito())} MXN*`);
+  l.push('');
+  l.push('¿Confirmas para arrancar tu pedido? ✨');
+  return l.join('\n');
+}
+
+window.__terminarCotizacion=()=>{
+  if(!carrito.length){ toast("Agrega al menos un producto"); return; }
+  const productos = carrito.map((x,i)=>`${i+1}. ${x.cant}× ${x.etiqueta}`).join('\n');
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
+    <h2>Cotización terminada</h2><div class="msub">${carrito.length} producto${carrito.length>1?'s':''} · ${totalPiezasCarrito()} piezas · Total <b>${fmt(totalCarrito())}</b></div>
+    <div style="background:var(--fondo);border-radius:14px;padding:14px;margin:14px 0;font-size:.85rem;white-space:pre-line">${productos}</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+      <button class="btn btn-wa" onclick="__enviarWhatsCliente()">📲 Enviar cotización por WhatsApp</button>
+      <button class="btn btn-primary" onclick="__confirmarPedidoDesdeCarrito()">✓ Confirmar pedido</button>
+      <button class="btn btn-ghost" onclick="__cerrar()">Seguir editando</button>
+    </div>`);
+};
+
+window.__enviarWhatsCliente=()=>{
+  const t=textoCotiCarritoParaCliente();
+  window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank");
+};
+
+window.__confirmarPedidoDesdeCarrito=()=>{
+  cerrarModal();
+  const items = carrito.map(x=>({etiqueta:x.etiqueta,cant:x.cant,base:x.base,desc:x.desc||0,total:x.total,notas:(x.notas||[]).join(' · ')}));
+  const total = totalCarrito();
+  const resumen = items.map(i=>`${i.cant}× ${i.etiqueta}`).join(' · ');
+  abrirModalPedido({items, total, resumen});
+};
 
 /* =====================================================================
    VENTAS Y PEDIDOS (con abonos parciales)
    ===================================================================== */
-function renderVentas(){
+function renderPedidos(){
   const main=$("main");
-  const abiertos = ventas.filter(v=>faltanteDe(v)>0.01).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
-  const saldados = ventas.filter(v=>faltanteDe(v)<=0.01).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
-  let h = `<div class="topbar-desk"><div><h1>Ventas y Pedidos</h1><div class="sub">${ventas.length} pedidos · ${abiertos.length} con saldo pendiente</div></div>
-    <button class="btn btn-primary" onclick="__nuevoPedido()">＋ Nuevo pedido</button></div>`;
-
-  // KPIs rápidos
-  const totalCobrado = ventas.reduce((s,v)=>s+pagosDe(v),0);
-  const totalPorCobrar = ventas.reduce((s,v)=>s+faltanteDe(v),0);
-  h += `<div class="grid g3" style="margin-bottom:20px">
-    ${kpiMini("Total cobrado","💵",fmt(totalCobrado),"var(--verde-claro)")}
-    ${kpiMini("Por cobrar","⏳",fmt(totalPorCobrar),"var(--naranja-claro)")}
-    ${kpiMini("Pedidos abiertos","📋",abiertos.length,"var(--violeta-claro)")}
+  const activos=pedidosActivos();
+  const completados=pedidosCompletados();
+  let h=`<div class="topbar-desk"><div><h1>Pedidos</h1><div class="sub">${activos.length} en producción · ${completados.length} completados</div></div>
+    <button class="btn btn-primary" onclick="__nuevoPedidoManual()">＋ Nuevo pedido</button></div>`;
+  h+=`<div class="grid g3" style="margin-bottom:20px">
+    ${kpiMini("En producción","🔨",activos.length,"var(--naranja-claro)")}
+    ${kpiMini("Completados","✓",completados.length,"var(--verde-claro)")}
+    ${kpiMini("Por cobrar","⏳",fmt(ventas.reduce((s,v)=>s+faltanteDe(v),0)),"var(--violeta-claro)")}
   </div>`;
-
-  if(abiertos.length){
-    h += `<div class="card" style="margin-bottom:16px"><div class="sec-head"><h2>⏳ Pendientes de pago</h2></div>${tablaPedidos(abiertos)}</div>`;
-  }
-  h += `<div class="card"><div class="sec-head"><h2>✓ Saldados</h2></div>${saldados.length?tablaPedidos(saldados):'<div style="color:var(--gris);padding:10px">Aún no hay pedidos saldados.</div>'}</div>`;
+  h+=`<div class="card" style="margin-bottom:16px"><div class="sec-head"><h2>🔨 En producción</h2></div>
+    ${activos.length?tablaPedidosProd(activos,false):'<div style="color:var(--gris);padding:10px">No hay pedidos activos.</div>'}</div>`;
+  h+=`<div class="card"><div class="sec-head"><h2>✓ Historial de completados</h2></div>
+    ${completados.length?tablaPedidosProd(completados,true):'<div style="color:var(--gris);padding:10px">Aún no hay completados.</div>'}</div>`;
   main.innerHTML=h;
 }
-function kpiMini(label,ic,valor,bg){
-  return `<div class="kpi"><div class="ic-box" style="background:${bg}">${ic}</div><div class="label">${label}</div><div class="valor">${valor}</div></div>`;
-}
-function tablaPedidos(lista){
-  let h = `<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Folio</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Pagado</th><th>Falta</th><th></th></tr></thead><tbody>`;
+function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
+function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
+
+function tablaPedidosProd(lista,completado){
+  let h=`<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Folio</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Pago</th><th></th></tr></thead><tbody>`;
   lista.forEach(v=>{
-    const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
-    h += `<tr class="click" onclick="__verPedido('${v.id}')">
-      <td><b>${v.folio||'—'}</b></td><td>${v.cliente||'—'}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.productos||'—'}</td>
-      <td>${fmt(v.total)}</td>
-      <td><div>${fmt(pag)}</div><div class="progress" style="width:70px"><div class="fill" style="width:${pct}%"></div></div></td>
-      <td>${falta>0.01?`<span class="pill naranja">${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`}</td>
-      <td style="color:var(--violeta);font-weight:700">›</td></tr>`;
+    const pag=pagosDe(v), falta=faltanteDe(v);
+    const pagoTag = falta>0.01?`<span class="pill naranja">Falta ${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`;
+    h+=`<tr class="click" onclick="__verPedido('${v.id}')">
+      <td><b>${v.folio||'—'}</b><div style="font-size:.72rem;color:var(--gris)">${fmtFecha(v.fecha)}</div></td>
+      <td>${v.cliente||'—'}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem">${v.productos||'—'}</td>
+      <td>${fmt(v.total)}</td><td>${pagoTag}</td>
+      <td>${completado?'<span class="pill verde">Terminado</span>':`<button class="btn btn-sm btn-verde" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Terminar</button>`}</td>
+    </tr>`;
   });
   return h+`</tbody></table></div>`;
 }
 
-window.__nuevoPedido=()=>modalNuevoPedido(null);
-function modalNuevoPedido(fromCoti){
-  const folio = "V-" + String(ventas.length+1).padStart(3,"0");
-  const prodPre = fromCoti ? `${fromCoti.cant}× ${fromCoti.etiqueta}` : "";
-  const totalPre = fromCoti ? Math.round(fromCoti.total) : "";
+window.__marcarCompletado=async(id)=>{
+  if(!confirm("¿Marcar este pedido como terminado? Seguirá visible en el historial.")) return;
+  await updateDoc(doc(db,"ventas",id),{estadoProd:"completado",fechaCompletado:hoy()});
+  toast("Pedido completado ✓");
+};
+
+function renderVentas(){
+  const main=$("main");
+  const activos=ventas.filter(v=>faltanteDe(v)>0.01).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const saldados=ventas.filter(v=>faltanteDe(v)<=0.01).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const totalCobrado=ventas.reduce((s,v)=>s+pagosDe(v),0);
+  const totalPorCobrar=ventas.reduce((s,v)=>s+faltanteDe(v),0);
+  let h=`<div class="topbar-desk"><div><h1>Ventas</h1><div class="sub">Seguimiento financiero de tus pedidos</div></div>
+    <button class="btn btn-primary" onclick="__nuevoPedidoManual()">＋ Nueva venta</button></div>`;
+  h+=`<div class="grid g3" style="margin-bottom:20px">
+    ${kpiMini("Total cobrado","💵",fmt(totalCobrado),"var(--verde-claro)")}
+    ${kpiMini("Por cobrar","⏳",fmt(totalPorCobrar),"var(--naranja-claro)")}
+    ${kpiMini("Pedidos totales","📋",ventas.length,"var(--violeta-claro)")}
+  </div>`;
+  if(activos.length){ h+=`<div class="card" style="margin-bottom:16px"><div class="sec-head"><h2>⏳ Pendientes de pago</h2></div>${tablaPedidos(activos)}</div>`; }
+  h+=`<div class="card"><div class="sec-head"><h2>✓ Saldados</h2></div>${saldados.length?tablaPedidos(saldados):'<div style="color:var(--gris);padding:10px">Aún no hay pedidos saldados.</div>'}</div>`;
+  main.innerHTML=h;
+}
+function tablaPedidos(lista){
+  let h=`<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Folio</th><th>Cliente</th><th>Total</th><th>Pagado</th><th>Falta</th><th>Producción</th></tr></thead><tbody>`;
+  lista.forEach(v=>{
+    const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
+    const prod=(v.estadoProd||"activo")==="completado"?'<span class="pill verde">Terminado</span>':'<span class="pill naranja">En producción</span>';
+    h+=`<tr class="click" onclick="__verPedido('${v.id}')"><td><b>${v.folio||'—'}</b></td><td>${v.cliente||'—'}</td>
+      <td>${fmt(v.total)}</td>
+      <td><div>${fmt(pag)}</div><div class="progress" style="width:70px"><div class="fill" style="width:${pct}%"></div></div></td>
+      <td>${falta>0.01?`<span class="pill naranja">${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`}</td>
+      <td>${prod}</td></tr>`;
+  });
+  return h+`</tbody></table></div>`;
+}
+
+/* Modal unificado para crear pedido, con items múltiples */
+window.__nuevoPedidoManual=()=>abrirModalPedido(null);
+
+function abrirModalPedido(prefill){
+  const folio="V-"+String(ventas.length+1).padStart(3,"0");
+  const productosStr=prefill?prefill.resumen:"";
+  const totalPre=prefill?Math.round(prefill.total):"";
+  const itemsPre=prefill?JSON.stringify(prefill.items):"[]";
   abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
-    <h2>Nuevo pedido</h2><div class="msub">${fromCoti?'Desde tu cotización — revisa y guarda':'Registra un pedido y sus abonos'}</div>
+    <h2>${prefill?'Confirmar pedido':'Nuevo pedido'}</h2>
+    <div class="msub">${prefill?`${prefill.items.length} producto(s) del carrito`:'Registra un pedido manualmente'}</div>
     <label>Folio</label><input id="pFolio" value="${folio}">
     <label>Fecha</label><input type="date" id="pFecha" value="${hoy()}">
     <label>Cliente</label><input id="pCliente" placeholder="Nombre del cliente">
-    <label>Productos / concepto</label><input id="pProd" value="${prodPre}" placeholder="Ej. 5 Sudaderas Estampadas">
-    <label>Detalles del pedido (opcional)</label><textarea id="pDet" rows="2" placeholder="Tallas, colores, notas de producción"></textarea>
+    <label>Productos / concepto</label><textarea id="pProd" rows="2" placeholder="Ej. 5 Sudaderas Estampadas + 3 Playeras">${productosStr.replace(/</g,'&lt;')}</textarea>
+    <label>Detalles adicionales (opcional)</label><textarea id="pDet" rows="2" placeholder="Tallas, colores, notas de producción"></textarea>
     <label>Precio total del pedido ($)</label><input type="number" id="pTotal" value="${totalPre}" placeholder="0">
     <label>Referido por (opcional)</label><input id="pRef" placeholder="Ej. Karen">
     <div style="background:var(--fondo);border-radius:14px;padding:14px;margin-top:16px">
-      <label style="margin-top:0">¿Recibiste un primer abono ya?</label>
+      <label style="margin-top:0">¿Primer abono ya recibido?</label>
       <div class="grid g2"><input type="number" id="pAbono" placeholder="Monto ($)"><select id="pMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
-      <div style="font-size:.75rem;color:var(--gris);margin-top:8px">Déjalo vacío si aún no hay pago. Podrás agregar más abonos después.</div>
+      <div style="font-size:.72rem;color:var(--gris);margin-top:8px">Déjalo vacío si aún no hay pago. Podrás agregar más abonos después.</div>
     </div>
-    <div style="margin-top:20px"><button class="btn btn-primary btn-block" onclick="__guardarPedido()">Guardar pedido</button></div>`);
+    <input type="hidden" id="pItems" value='${itemsPre.replace(/'/g,"&#39;")}'>
+    <div style="margin-top:20px"><button class="btn btn-primary btn-block" onclick="__guardarPedido()">${prefill?'Confirmar pedido':'Guardar pedido'}</button></div>`);
 }
+
 window.__guardarPedido=async()=>{
   const total=parseFloat($("pTotal").value)||0;
   const cliente=$("pCliente").value.trim();
   if(!cliente){ toast("Ponle nombre al cliente"); return; }
   const pagos=[]; const ab=parseFloat($("pAbono").value);
-  if(ab>0) pagos.push({monto:ab, metodo:$("pMetodo").value, fecha:$("pFecha").value});
-  const datos={ folio:$("pFolio").value.trim(), fecha:$("pFecha").value, cliente,
-    productos:$("pProd").value.trim(), detalles:$("pDet").value.trim(), total,
-    referido:$("pRef").value.trim()||null, pagos };
+  if(ab>0) pagos.push({monto:ab,metodo:$("pMetodo").value,fecha:$("pFecha").value});
+  let items=[]; try{ items=JSON.parse($("pItems").value); }catch(e){}
+  const datos={folio:$("pFolio").value.trim(),fecha:$("pFecha").value,cliente,
+    productos:$("pProd").value.trim(),detalles:$("pDet").value.trim(),total,
+    referido:$("pRef").value.trim()||null,pagos,items,estadoProd:"activo"};
   await addDoc(collection(db,"ventas"),datos);
-  cerrarModal(); toast("Pedido guardado ✓");
+  carrito=[]; cerrarModal(); toast("Pedido guardado ✓");
 };
 
 window.__verPedido=(id)=>{
   const v=ventas.find(x=>x.id===id); if(!v) return;
   const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
-  let pagosHtml = (v.pagos||[]).length ? v.pagos.map((p,i)=>`<div class="quote-line"><span>${fmtFecha(p.fecha)} · ${p.metodo}</span><span>${fmt(p.monto)} <button onclick="__borrarAbono('${id}',${i})" style="color:var(--rojo);margin-left:8px">✕</button></span></div>`).join("") : '<div style="color:var(--gris);font-size:.85rem;padding:6px 0">Sin abonos aún</div>';
+  const completado=(v.estadoProd||"activo")==="completado";
+  const pagosHtml=(v.pagos||[]).length?v.pagos.map((p,i)=>`<div class="quote-line"><span>${fmtFecha(p.fecha)} · ${p.metodo}</span><span>${fmt(p.monto)} <button onclick="__borrarAbono('${id}',${i})" style="color:var(--rojo);margin-left:8px">✕</button></span></div>`).join(""):'<div style="color:var(--gris);font-size:.85rem;padding:6px 0">Sin abonos aún</div>';
+  const itemsHtml=(v.items||[]).length?`<div style="background:var(--fondo);border-radius:12px;padding:12px;margin:8px 0"><div style="font-weight:700;font-size:.85rem;margin-bottom:6px">Productos del pedido</div>${v.items.map(it=>`<div style="font-size:.85rem;padding:4px 0;display:flex;justify-content:space-between"><span>${it.cant}× ${it.etiqueta}</span><span><b>${fmt(it.total)}</b></span></div>`).join('')}</div>`:'';
   abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
     <h2>${v.folio||'Pedido'}</h2><div class="msub">${v.cliente} · ${fmtFecha(v.fecha)}</div>
-    <div style="background:var(--fondo);border-radius:14px;padding:16px;margin-bottom:8px">
-      <div style="font-weight:600">${v.productos||'—'}</div>
-      ${v.detalles?`<div style="font-size:.82rem;color:var(--gris);margin-top:6px">${v.detalles}</div>`:''}
-      ${v.referido?`<div style="font-size:.78rem;margin-top:8px"><span class="pill violeta">Referido: ${v.referido}</span></div>`:''}
+    <div style="display:flex;gap:8px;margin:8px 0 14px">
+      ${completado?'<span class="pill verde">✓ Terminado</span>':'<span class="pill naranja">En producción</span>'}
+      ${falta>0.01?`<span class="pill naranja">Falta ${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`}
     </div>
-    <div class="quote-line"><span>Total del pedido</span><span><b>${fmt(v.total)}</b></span></div>
+    ${itemsHtml}
+    ${v.productos?`<div style="background:var(--fondo);border-radius:14px;padding:12px;margin:8px 0"><div style="font-weight:600">${v.productos}</div>${v.detalles?`<div style="font-size:.82rem;color:var(--gris);margin-top:6px">${v.detalles}</div>`:''}${v.referido?`<div style="font-size:.78rem;margin-top:8px"><span class="pill violeta">Referido: ${v.referido}</span></div>`:''}</div>`:''}
+    <div class="quote-line"><span>Total</span><span><b>${fmt(v.total)}</b></span></div>
     <div class="quote-line"><span>Pagado</span><span style="color:var(--verde)">${fmt(pag)}</span></div>
     <div class="progress"><div class="fill" style="width:${pct}%"></div></div>
     <div class="quote-line"><span>Falta</span><span style="color:${falta>0.01?'var(--naranja)':'var(--verde)'}"><b>${fmt(falta)}</b></span></div>
@@ -606,16 +810,16 @@ window.__verPedido=(id)=>{
       <label style="margin-top:0">Registrar nuevo abono</label>
       <div class="grid g2"><input type="number" id="nvAbono" placeholder="Monto ($)"><select id="nvMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
       <button class="btn btn-verde btn-block" style="margin-top:10px" onclick="__agregarAbono('${id}')">＋ Agregar abono</button></div>`:'<div class="pill verde" style="margin-top:14px">✓ Pedido saldado completamente</div>'}
-    <div style="display:flex;gap:10px;margin-top:18px">
-      <button class="btn btn-outline" style="flex:1" onclick="__editarPedido('${id}')">Editar</button>
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+      ${!completado?`<button class="btn btn-verde" style="flex:1;min-width:120px" onclick="__marcarCompletado('${id}');__cerrar()">✓ Marcar terminado</button>`:''}
+      <button class="btn btn-outline" style="flex:1;min-width:100px" onclick="__editarPedido('${id}')">Editar</button>
       <button class="btn btn-peligro" onclick="__borrarPedido('${id}')">Eliminar</button></div>`);
 };
 window.__agregarAbono=async(id)=>{
   const v=ventas.find(x=>x.id===id); const m=parseFloat($("nvAbono").value);
   if(!m||m<=0){ toast("Ingresa un monto válido"); return; }
   const pagos=[...(v.pagos||[]),{monto:m,metodo:$("nvMetodo").value,fecha:hoy()}];
-  await updateDoc(doc(db,"ventas",id),{pagos});
-  toast("Abono registrado 💵"); __verPedido(id);
+  await updateDoc(doc(db,"ventas",id),{pagos}); toast("Abono registrado 💵"); __verPedido(id);
 };
 window.__borrarAbono=async(id,i)=>{
   const v=ventas.find(x=>x.id===id); const pagos=[...(v.pagos||[])]; pagos.splice(i,1);
@@ -625,7 +829,7 @@ window.__borrarPedido=async(id)=>{ if(confirm("¿Eliminar este pedido?")){ await
 window.__editarPedido=(id)=>{ const v=ventas.find(x=>x.id===id);
   abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Editar pedido</h2>
     <label>Cliente</label><input id="ePCliente" value="${(v.cliente||'').replace(/"/g,'&quot;')}">
-    <label>Productos</label><input id="ePProd" value="${(v.productos||'').replace(/"/g,'&quot;')}">
+    <label>Productos</label><textarea id="ePProd" rows="2">${v.productos||''}</textarea>
     <label>Detalles</label><textarea id="ePDet" rows="2">${v.detalles||''}</textarea>
     <label>Total ($)</label><input type="number" id="ePTotal" value="${v.total||0}">
     <div style="margin-top:18px"><button class="btn btn-primary btn-block" onclick="__guardarEdicionPedido('${id}')">Guardar cambios</button></div>`);
@@ -661,23 +865,63 @@ function renderGastos(){
   main.innerHTML=h;
 }
 function gastosMes(d){ const m=d.getMonth(),y=d.getFullYear(); return gastos.filter(g=>{if(!g.fecha)return false;const x=new Date(g.fecha+"T00:00:00");return x.getMonth()===m&&x.getFullYear()===y;}).reduce((s,g)=>s+(+g.monto||0),0); }
+let gastoItems=[]; // buffer temporal para nuevo gasto multi-item
+
 window.__nuevoGasto=()=>{
+  gastoItems=[];
   const folio="G-"+String(gastos.length+1).padStart(3,"0");
-  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Nuevo gasto</h2><div class="msub">Registra una salida de dinero</div>
+  abrirModal(modalGastoHTML(folio));
+};
+
+function modalGastoHTML(folio){
+  const total=gastoItems.reduce((s,x)=>s+(+x.monto||0),0);
+  return `<button class="modal-close" onclick="__cerrar()">✕</button><h2>Nuevo gasto</h2><div class="msub">Puedes registrar uno o varios items en el mismo gasto</div>
     <label>Folio</label><input id="gFolio" value="${folio}">
     <label>Fecha</label><input type="date" id="gFecha" value="${hoy()}">
-    <label>Concepto</label><input id="gConcepto" placeholder="Ej. Rollo de vinil textil">
-    <label>Categoría</label><select id="gCat">${CAT_GASTO.map(c=>`<option>${c}</option>`).join("")}</select>
-    <label>Método de pago</label><select id="gMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select>
-    <label>Monto ($)</label><input type="number" id="gMonto" placeholder="0">
-    <div style="margin-top:18px"><button class="btn btn-primary btn-block" onclick="__guardarGasto()">Guardar gasto</button></div>`);
+    <label>Método de pago general</label><select id="gMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select>
+    <div style="background:var(--fondo);border-radius:14px;padding:14px;margin-top:14px">
+      <div style="font-weight:700;margin-bottom:8px">Items del gasto</div>
+      ${gastoItems.length?gastoItems.map((it,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--linea);font-size:.9rem"><div><b>${it.concepto}</b><div style="font-size:.72rem;color:var(--gris)">${it.categoria}</div></div><div>${fmt(it.monto)} <button onclick="__quitarItemGasto(${i})" style="color:var(--rojo);margin-left:8px">✕</button></div></div>`).join(""):'<div style="color:var(--gris);font-size:.85rem;padding:4px 0">Aún no agregas items.</div>'}
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--linea)">
+        <label style="margin-top:0">Concepto</label><input id="gItemConcepto" placeholder="Ej. Rollo de vinil textil">
+        <div class="grid g2"><div><label style="margin-top:0">Categoría</label><select id="gItemCat">${CAT_GASTO.map(c=>`<option>${c}</option>`).join("")}</select></div><div><label style="margin-top:0">Monto ($)</label><input type="number" id="gItemMonto" placeholder="0"></div></div>
+        <button class="btn btn-ghost btn-sm btn-block" style="margin-top:10px" onclick="__agregarItemGasto()">＋ Agregar item</button>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1.05rem;margin-top:12px;padding-top:12px;border-top:2px solid var(--tinta)"><span>Total del gasto</span><span>${fmt(total)}</span></div>
+    </div>
+    <div style="margin-top:18px"><button class="btn btn-primary btn-block" onclick="__guardarGasto()">Guardar gasto</button></div>`;
+}
+
+window.__agregarItemGasto=()=>{
+  const c=$("gItemConcepto").value.trim(); const m=parseFloat($("gItemMonto").value)||0;
+  if(!c){ toast("Escribe el concepto"); return; }
+  if(m<=0){ toast("Ingresa un monto"); return; }
+  gastoItems.push({concepto:c,categoria:$("gItemCat").value,monto:m});
+  const folio=$("gFolio").value;
+  $("modalPanel").innerHTML=modalGastoHTML(folio);
 };
+window.__quitarItemGasto=(i)=>{
+  gastoItems.splice(i,1);
+  $("modalPanel").innerHTML=modalGastoHTML($("gFolio")?.value||"G-000");
+};
+
 window.__guardarGasto=async()=>{
-  const monto=parseFloat($("gMonto").value)||0;
-  if(monto<=0){ toast("Ingresa un monto válido"); return; }
-  await addDoc(collection(db,"gastos"),{folio:$("gFolio").value.trim(),fecha:$("gFecha").value,concepto:$("gConcepto").value.trim(),categoria:$("gCat").value,metodo:$("gMetodo").value,monto});
-  cerrarModal(); toast("Gasto registrado 📉");
+  // Guardar cada item como un doc de gasto separado (mantiene compatibilidad con vista existente),
+  // agrupados por el mismo folio para que "juntos" en la exportación.
+  // Si solo hay 1 item o ninguno pero hay uno pendiente en el form, tomarlo también.
+  const folio=$("gFolio").value.trim(); const fecha=$("gFecha").value; const metodo=$("gMetodo").value;
+  // Auto-recoger un item semi-lleno
+  const cPend=$("gItemConcepto")?.value.trim(), mPend=parseFloat($("gItemMonto")?.value)||0;
+  if(cPend && mPend>0) gastoItems.push({concepto:cPend,categoria:$("gItemCat").value,monto:mPend});
+  if(!gastoItems.length){ toast("Agrega al menos un item"); return; }
+  const batch=writeBatch(db);
+  gastoItems.forEach((it,i)=>{
+    batch.set(doc(collection(db,"gastos")),{folio:gastoItems.length>1?`${folio}-${i+1}`:folio,fecha,concepto:it.concepto,categoria:it.categoria,metodo,monto:it.monto,grupo:gastoItems.length>1?folio:null});
+  });
+  await batch.commit();
+  gastoItems=[]; cerrarModal(); toast(`Gasto registrado (${gastoItems.length||1} item${(gastoItems.length||1)>1?'s':''}) 📉`);
 };
+
 window.__borrarGasto=async(id)=>{ if(confirm("¿Eliminar este gasto?")){ await deleteDoc(doc(db,"gastos",id)); toast("Gasto eliminado"); } };
 
 /* =====================================================================
@@ -833,12 +1077,12 @@ function renderDashboard(){
   </div>`;
 
   h+=`<div class="grid g2" style="margin-bottom:20px">
-    <div class="card"><div class="sec-head"><h2>Ventas últimos 6 meses</h2></div><canvas id="chartVentas" height="180"></canvas></div>
-    <div class="card"><div class="sec-head"><h2>Ingresos vs Gastos (este mes)</h2></div><canvas id="chartIngGas" height="180"></canvas></div>
+    <div class="card"><div class="sec-head"><h2>Ventas últimos 6 meses</h2></div><div class="chart-box"><canvas id="chartVentas"></canvas></div></div>
+    <div class="card"><div class="sec-head"><h2>Ingresos vs Gastos (este mes)</h2></div><div class="chart-box"><canvas id="chartIngGas"></canvas></div></div>
   </div>`;
 
   h+=`<div class="grid g2">
-    <div class="card"><div class="sec-head"><h2>Últimas ventas</h2><span class="link" onclick="__irVista('ventas')">Ver todas →</span></div>
+    <div class="card"><div class="sec-head"><h2>Últimas ventas</h2><span class="link" onclick="__irVista('pedidos')">Ver todos →</span></div>
       ${ultimasVentas.length?`<table class="tabla"><tbody>${ultimasVentas.map(v=>`<tr class="click" onclick="__verPedido('${v.id}')"><td><b>${v.cliente||'—'}</b><div style="font-size:.75rem;color:var(--gris)">${v.productos||''}</div></td><td style="text-align:right"><b>${fmt(v.total)}</b><div style="font-size:.72rem">${faltanteDe(v)>0.01?`<span class="pill naranja">falta ${fmt(faltanteDe(v))}</span>`:`<span class="pill verde">saldado</span>`}</div></td></tr>`).join("")}</tbody></table>`:'<div style="color:var(--gris)">Aún no hay ventas.</div>'}
     </div>
     <div class="card"><div class="sec-head"><h2>⏳ Cuentas por cobrar</h2></div>
@@ -882,58 +1126,6 @@ function chartOpts(noGrid){
 /* =====================================================================
    MÉTRICAS
    ===================================================================== */
-function renderMetricas(){
-  const main=$("main");
-  const totalIngresos=ventas.reduce((s,v)=>s+pagosDe(v),0);
-  const totalGastos=gastos.reduce((s,g)=>s+(+g.monto||0),0);
-  const utilidad=totalIngresos-totalGastos;
-  const ticketProm=ventas.length?ventas.reduce((s,v)=>s+(+v.total||0),0)/ventas.length:0;
-
-  let h=`<div class="topbar-desk"><div><h1>Métricas</h1><div class="sub">Radiografía de CreatiBox</div></div></div>`;
-  h+=`<div class="grid g4" style="margin-bottom:20px">
-    ${kpiFull("Ingresos totales","💰",fmt(totalIngresos),"var(--verde-claro)","var(--verde)")}
-    ${kpiFull("Gastos totales","📉",fmt(totalGastos),"var(--rojo-claro)","var(--rojo)")}
-    ${kpiFull("Utilidad neta","📈",fmt(utilidad),"var(--violeta-claro)","var(--violeta)")}
-    ${kpiFull("Ticket promedio","🎫",fmt(ticketProm),"var(--naranja-claro)","var(--naranja)")}
-  </div>`;
-  h+=`<div class="grid g2" style="margin-bottom:20px">
-    <div class="card"><div class="sec-head"><h2>Ingresos por mes</h2></div><canvas id="mChartMes" height="200"></canvas></div>
-    <div class="card"><div class="sec-head"><h2>Gastos por categoría</h2></div><canvas id="mChartCat" height="200"></canvas></div>
-  </div>`;
-  h+=`<div class="grid g2">
-    <div class="card"><div class="sec-head"><h2>Métodos de pago (ventas)</h2></div><canvas id="mChartMetodo" height="200"></canvas></div>
-    <div class="card"><div class="sec-head"><h2>Top clientes</h2></div><div id="topClientes"></div></div>
-  </div>`;
-  main.innerHTML=h;
-  setTimeout(()=>{ dibujarMetricas(); },30);
-}
-function dibujarMetricas(){
-  // ingresos por mes
-  const im=ingresosPorMes(6);
-  crearChart("mChartMes","bar",im.map(d=>d.label),[{data:im.map(d=>d.val),backgroundColor:"#5B4EE8",borderRadius:8}]);
-  // gastos por categoría
-  const cat={}; gastos.forEach(g=>cat[g.categoria||"Otro"]=(cat[g.categoria||"Otro"]||0)+(+g.monto||0));
-  crearChartPie("mChartCat",Object.keys(cat),Object.values(cat));
-  // métodos de pago
-  const met={}; ventas.forEach(v=>(v.pagos||[]).forEach(p=>met[p.metodo||"Otro"]=(met[p.metodo||"Otro"]||0)+(+p.monto||0)));
-  crearChartPie("mChartMetodo",Object.keys(met),Object.values(met));
-  // top clientes
-  const cli={}; ventas.forEach(v=>cli[v.cliente||"—"]=(cli[v.cliente||"—"]||0)+pagosDe(v));
-  const top=Object.entries(cli).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  $("topClientes").innerHTML=top.length?`<table class="tabla"><tbody>${top.map(([c,v],i)=>`<tr><td><b>${i+1}.</b> ${c}</td><td style="text-align:right;font-weight:700">${fmt(v)}</td></tr>`).join("")}</tbody></table>`:'<div style="color:var(--gris)">Sin datos aún.</div>';
-}
-function crearChart(cid,type,labels,datasets){
-  const el=$(cid); if(!el||!window.Chart)return; if(charts[cid])charts[cid].destroy();
-  charts[cid]=new Chart(el,{type,data:{labels,datasets},options:chartOpts()});
-}
-function crearChartPie(cid,labels,data){
-  const el=$(cid); if(!el||!window.Chart)return; if(charts[cid])charts[cid].destroy();
-  charts[cid]=new Chart(el,{type:"doughnut",data:{labels,datasets:[{data,backgroundColor:["#5B4EE8","#22B573","#F59E0B","#E5484D","#3B82F6","#9B9BAB","#FFE14D"]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{padding:14,font:{size:11}}},tooltip:{callbacks:{label:c=>c.label+": "+fmt(c.parsed)}}}}});
-}
-
-/* =====================================================================
-   EXPORTAR EXCEL
-   ===================================================================== */
 function exportarExcel(){
   const wb=XLSX.utils.book_new();
   // Ventas
@@ -963,7 +1155,7 @@ function exportarExcel(){
 /* =====================================================================
    NAVEGACIÓN + ARRANQUE
    ===================================================================== */
-const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,ventas:renderVentas,gastos:renderGastos,productos:renderProductos,materia:renderMateria,metricas:renderMetricas};
+const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,pedidos:renderPedidos,ventas:renderVentas,gastos:renderGastos,productos:renderProductos,materia:renderMateria};
 function irVista(v){
   vistaActual=v;
   Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={};
