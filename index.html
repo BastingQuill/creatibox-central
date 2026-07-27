@@ -169,7 +169,16 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   .botnav .b .ic{font-size:1.25rem}
   .botnav .b.activo{color:var(--violeta)}
   .fab{bottom:78px;right:16px}
-  .tabla-wrap{overflow-x:auto}
+  .tabla-wrap{overflow-x:visible}
+  .tabla.responsive thead{display:none}
+  .tabla.responsive, .tabla.responsive tbody, .tabla.responsive tr{display:block;width:100%}
+  .tabla.responsive tr{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:6px 12px;margin-bottom:10px}
+  .tabla.responsive td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--linea);text-align:right}
+  .tabla.responsive td:last-child{border-bottom:none}
+  .tabla.responsive td::before{content:attr(data-label);font-size:.72rem;font-weight:700;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.03em;text-align:left;flex-shrink:0}
+  .tabla.responsive td[data-label=""]::before, .tabla.responsive td:not([data-label])::before{content:""}
+  .tabla.responsive td.td-full{display:block;text-align:left}
+  .tabla.responsive td.td-full::before{display:none}
   .modal{align-items:flex-end;padding:0}
   .modal-panel{max-width:100%;border-radius:24px 24px 0 0;max-height:92vh}
 }
@@ -258,7 +267,9 @@ const PRECIOS = {
   },
   bordado: {
     "Playera Prime Adulto":230, "Playera Niño":210, "Sudadera":400, "Tote Bag":140,
-    "Polo":250, "Camisa Manga Larga":390, "Camisa Manga Corta":360
+    "Polo":250, "Camisa Manga Larga":390, "Camisa Manga Corta":360,
+    "Polo Uniforme Infantil (1 pieza)":250, "Polo Uniforme Infantil (10+ piezas)":225, "Polo Uniforme Infantil (20+ piezas)":200,
+    "Bordado de Escudo (1 pieza)":180, "Bordado Mayores (15+ piezas)":150
   },
   sticker_plantilla: { "Papel Fotográfico":55, "Vinil Imprimible":65, "Vinil Holográfico":75, "Vinil Holográfico Laminado":85 },
   paquete_basico: { "Papel Fotográfico":165, "Vinil Resistente al agua":195, "Vinil Holográfico":225, "Laminado (glitter/holo/transparente)":245 },
@@ -266,8 +277,9 @@ const PRECIOS = {
   calcomania: { medidas:[5,10,15,20,25,30], precios:[[12,18,25,35,40,45],[18,26,40,50,55,60],[25,40,45,58,72,82],[35,50,58,72,100,110],[40,55,72,100,115,125],[45,60,82,110,125,130]] },
   otros: { "Cake Topper":150, "Llavero de Acrílico identificador":50, "Llavero de Tablas o Vocales":100, "Libreta con Vinil":25 },
   ponchado: 180, bordadoExtra:50, laminadoExtra:15,
-  // camisas limitadas a -10% en mayoreo; costal y stickers excluidos
-  mayoreoExcluido:["Costal de Yute"], mayoreoMax:{"Camisa Manga Larga":10,"Camisa Manga Corta":10}
+  // camisas limitadas a -10% en mayoreo; costal, stickers y SKUs con tier propio ya incluido, excluidos
+  mayoreoExcluido:["Costal de Yute","Polo Uniforme Infantil (1 pieza)","Polo Uniforme Infantil (10+ piezas)","Polo Uniforme Infantil (20+ piezas)","Bordado de Escudo (1 pieza)","Bordado Mayores (15+ piezas)"],
+  mayoreoMax:{"Camisa Manga Larga":10,"Camisa Manga Corta":10}
 };
 // Mayoreo general: 10+ = -10%, 20+ = -15% (para prendas). Calcomanías: 10+ -10%, 20+ -20% (según tu excel)
 function descMayoreoPrenda(cant){ if(cant>=20) return 15; if(cant>=10) return 10; return 0; }
@@ -277,6 +289,7 @@ function descMayoreoCalco(cant){ if(cant>=20) return 20; if(cant>=10) return 10;
    ESTADO GLOBAL
    ===================================================================== */
 let productos=[], materia=[], ventas=[], gastos=[], pedidos=[], config={capitalInicial:0};
+let productosCustom=[]; // productos 100% nuevos creados por Abraham/Paola, con su propio desglose de materia prima
 let preciosOverride={}; // {grupo:{item:precio}} guardado en Firebase, pisa a PRECIOS
 function P(grupo,item){ if(preciosOverride[grupo]&&preciosOverride[grupo][item]!=null) return preciosOverride[grupo][item]; return PRECIOS[grupo]?.[item]; }
 function preciosDe(grupo){ // devuelve objeto combinado base+override para un grupo simple
@@ -361,6 +374,7 @@ const SERVICIOS = [
   {id:"sticker", nombre:"Stickers / Etiquetas", emoji:"🏷️", desc:"Plantillas y paquetes"},
   {id:"calcomania", nombre:"Calcomanías", emoji:"🎯", desc:"Vinil de corte por tamaño"},
   {id:"otros", nombre:"Otros productos", emoji:"🎁", desc:"Cake topper, llaveros, libretas"},
+  {id:"personalizado", nombre:"Producto Personalizado", emoji:"🆕", desc:"Tus productos creados a la medida"},
 ];
 
 function iniciarCoti(){ coti = {servicio:null, opciones:{}, cant:1, extras:{}}; renderCotizar(); }
@@ -388,6 +402,7 @@ function renderCotizar(){
   else if(coti.servicio==="sticker") cont += pasoSticker();
   else if(coti.servicio==="calcomania") cont += pasoCalcomania();
   else if(coti.servicio==="otros") cont += pasoOtros();
+  else if(coti.servicio==="personalizado") cont += pasoPersonalizado();
   cont += `</div></div>`;
 
   // Resultado si está completa
@@ -397,7 +412,10 @@ function renderCotizar(){
   cont += renderCarrito();
   main.innerHTML = cont;
   // rebind inputs dinámicos
-  document.querySelectorAll("[data-coti-cant]").forEach(el=>el.oninput=e=>{ coti.cant=Math.max(1,parseInt(e.target.value)||1); renderCotizar(); });
+  document.querySelectorAll("[data-coti-cant]").forEach(el=>{
+    el.onchange=e=>{ coti.cant=Math.max(1,parseInt(e.target.value)||1); renderCotizar(); };
+    el.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.target.blur(); } });
+  });
 }
 
 function renderStepper(){
@@ -464,6 +482,8 @@ function pasoSticker(){
 /* ---- Calcomanía ---- */
 function pasoCalcomania(){
   const meds = PRECIOS.calcomania.medidas;
+  if(!coti.opciones.ancho) coti.opciones.ancho = meds[0];
+  if(!coti.opciones.alto) coti.opciones.alto = meds[0];
   let h = `<div class="grid g2">
     <div><label style="margin-top:0">Ancho</label><select onchange="__cotiOpc('ancho',this.value)">${meds.map(m=>`<option ${coti.opciones.ancho==m?'selected':''}>${m}</option>`).join("")}</select></div>
     <div><label style="margin-top:0">Alto</label><select onchange="__cotiOpc('alto',this.value)">${meds.map(m=>`<option ${coti.opciones.alto==m?'selected':''}>${m}</option>`).join("")}</select></div>
@@ -477,9 +497,21 @@ function pasoOtros(){
   if(coti.opciones.producto) h += cantidadInput();
   return h;
 }
-function cantidadInput(label="Cantidad"){
-  return `<label>${label}</label><input type="number" min="1" value="${coti.cant}" data-coti-cant>`;
+function pasoPersonalizado(){
+  if(!productosCustom.length) return `<div style="color:var(--gris);font-size:.9rem">Aún no tienes productos personalizados. Créalos en la sección <b>Productos</b> primero (con su desglose de materia prima), y aquí podrás cotizarlos.</div>`;
+  let h=`<label>Producto</label><select onchange="__cotiOpc('productoId',this.value)"><option value="">Elige…</option>${productosCustom.map(p=>`<option value="${p.id}" ${coti.opciones.productoId===p.id?'selected':''}>${p.nombre} — ${fmt(p.precioVenta)}</option>`).join("")}</select>`;
+  if(coti.opciones.productoId) h += cantidadInput();
+  return h;
 }
+function cantidadInput(label="Cantidad"){
+  return `<label>${label}</label>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button type="button" class="btn btn-ghost" style="width:46px;height:46px;padding:0;font-size:1.3rem;font-weight:800;flex-shrink:0" onclick="__cotiCantAjustar(-1)">−</button>
+      <input type="number" min="1" value="${coti.cant}" data-coti-cant style="text-align:center;font-weight:700;font-size:1.05rem">
+      <button type="button" class="btn btn-ghost" style="width:46px;height:46px;padding:0;font-size:1.3rem;font-weight:800;flex-shrink:0" onclick="__cotiCantAjustar(1)">+</button>
+    </div>`;
+}
+window.__cotiCantAjustar=(delta)=>{ coti.cant=Math.max(1,(coti.cant||1)+delta); renderCotizar(); };
 
 /* ---- CÁLCULO DE COTIZACIÓN ---- */
 function calcularCoti(){
@@ -498,8 +530,12 @@ function calcularCoti(){
     base = P("bordado",o.prenda);
     etiqueta = `${o.prenda} — Bordado ${o.tipo==='nombre'?'Nombre/Texto':'Logo/Escudo'}`;
     var _c={grupo:"bordado",item:o.prenda};
-    desc = descMayoreoPrenda(c);
-    const max = PRECIOS.mayoreoMax[o.prenda]; if(max && desc>max) desc=max;
+    if(PRECIOS.mayoreoExcluido.includes(o.prenda)){
+      desc=0; notas.push("Este precio ya incluye su propio escalón de cantidad — no se le suma descuento adicional");
+    } else {
+      desc = descMayoreoPrenda(c);
+      const max = PRECIOS.mayoreoMax[o.prenda]; if(max && desc>max) desc=max;
+    }
     if(o.tipo==='logo' && coti.extras.extra==='si'){ base += PRECIOS.bordadoExtra; extras.push(["Bordado extra (>10×10cm)",PRECIOS.bordadoExtra]); }
   } else if(coti.servicio==="sticker"){
     if(o.modo==='plantilla'){ if(!o.material) return null; base=P('sticker_plantilla',o.material); etiqueta=`Plantilla — ${o.material}`; notas.push("Mínimo 2 plantillas"); var _c={grupo:'sticker_plantilla',item:o.material}; }
@@ -514,6 +550,11 @@ function calcularCoti(){
     notas.push("Compra mínima $50");
   } else if(coti.servicio==="otros"){
     if(!o.producto) return null; base=P("otros",o.producto); etiqueta=o.producto; var _c={grupo:'otros',item:o.producto};
+  } else if(coti.servicio==="personalizado"){
+    if(!o.productoId) return null;
+    const pc=productosCustom.find(x=>x.id===o.productoId); if(!pc) return null;
+    base=pc.precioVenta; etiqueta=pc.nombre; var _c={custom:true,producto:pc};
+    if(pc.notas) notas.push(pc.notas);
   }
   if(base==null) return null;
   const subtotal = base*c;
@@ -529,7 +570,21 @@ function calcularCoti(){
 function renderResultadoCoti(r){
   // "¿Cómo se arma?" (interno)
   let armado="";
-  if(r._costeo){
+  if(r._costeo && r._costeo.custom){
+    const pc=r._costeo.producto;
+    const desglose=(pc.materiales||[]).map(m=>[`${m.nombre} (${m.cantidad}×${fmt2(m.costoUnitario)})`, m.cantidad*m.costoUnitario]);
+    if(pc.manoObra) desglose.push(["Mano de obra",pc.manoObra]);
+    if(pc.otrosCostos) desglose.push(["Otros costos",pc.otrosCostos]);
+    const total=desglose.reduce((s,d)=>s+d[1],0);
+    const utilidad=r.base-total; const margen=r.base?utilidad/r.base*100:0;
+    armado = `<div class="card" style="margin-top:16px;border:1.5px dashed var(--linea);background:#FAFAFC">
+      <div class="sec-head"><h2>🧵 ¿Cómo se arma? <span style="font-size:.7rem;color:var(--gris);font-weight:500;text-transform:none;letter-spacing:0">Solo para ustedes — no se comparte</span></h2></div>
+      ${desglose.map(d=>`<div class="quote-line"><span>${d[0]}</span><span>${fmt2(d[1])}</span></div>`).join("")}
+      <div class="quote-line total" style="border-top:1px solid var(--tinta);font-size:.95rem"><span>Costo unitario</span><span>${fmt2(total)}</span></div>
+      <div class="quote-line"><span>Precio de venta unitario</span><span><b>${fmt(r.base)}</b></span></div>
+      <div class="quote-line" style="border-bottom:none"><span>Utilidad por pieza</span><span style="color:${utilidad>0?'var(--verde)':'var(--rojo)'};font-weight:700">${fmt2(utilidad)} <span style="font-size:.75rem">(${margen.toFixed(0)}% margen)</span></span></div>
+    </div>`;
+  } else if(r._costeo){
     const c=costoDe(r._costeo.grupo,r._costeo.item);
     if(c){
       const utilidad = r.base - c.total;
@@ -682,7 +737,10 @@ function renderPedidos(){
   const activos=pedidosActivos();
   const completados=pedidosCompletados();
   let h=`<div class="topbar-desk"><div><h1>Pedidos</h1><div class="sub">${activos.length} en producción · ${completados.length} completados</div></div>
-    <button class="btn btn-primary" onclick="__nuevoPedidoManual()">＋ Nuevo pedido</button></div>`;
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG1" accept=".xlsx" style="display:none"></label>
+      <button class="btn btn-primary" onclick="__nuevoPedidoManual()">＋ Nuevo pedido</button>
+    </div></div>`;
   h+=`<div class="grid g3" style="margin-bottom:20px">
     ${kpiMini("En producción","🔨",activos.length,"var(--naranja-claro)")}
     ${kpiMini("Completados","✓",completados.length,"var(--verde-claro)")}
@@ -693,21 +751,22 @@ function renderPedidos(){
   h+=`<div class="card"><div class="sec-head"><h2>✓ Historial de completados</h2></div>
     ${completados.length?tablaPedidosProd(completados,true):'<div style="color:var(--gris);padding:10px">Aún no hay completados.</div>'}</div>`;
   main.innerHTML=h;
+  $("impVG1").onchange=__importarVentasGastosExcel;
 }
 function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
 function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
 
 function tablaPedidosProd(lista,completado){
-  let h=`<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Folio</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Pago</th><th></th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive"><thead><tr><th>Folio</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Pago</th><th></th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v), falta=faltanteDe(v);
     const pagoTag = falta>0.01?`<span class="pill naranja">Falta ${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`;
     h+=`<tr class="click" onclick="__verPedido('${v.id}')">
-      <td><b>${v.folio||'—'}</b><div style="font-size:.72rem;color:var(--gris)">${fmtFecha(v.fecha)}</div></td>
-      <td>${v.cliente||'—'}</td>
-      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem">${v.productos||'—'}</td>
-      <td>${fmt(v.total)}</td><td>${pagoTag}</td>
-      <td>${completado?'<span class="pill verde">Terminado</span>':`<button class="btn btn-sm btn-verde" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Terminar</button>`}</td>
+      <td data-label="Folio"><b>${v.folio||'—'}</b><div style="font-size:.72rem;color:var(--gris)">${fmtFecha(v.fecha)}</div></td>
+      <td data-label="Cliente">${v.cliente||'—'}</td>
+      <td data-label="Productos" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem">${v.productos||'—'}</td>
+      <td data-label="Total">${fmt(v.total)}</td><td data-label="Pago">${pagoTag}</td>
+      <td data-label="">${completado?'<span class="pill verde">Terminado</span>':`<button class="btn btn-sm btn-verde" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Terminar</button>`}</td>
     </tr>`;
   });
   return h+`</tbody></table></div>`;
@@ -726,7 +785,10 @@ function renderVentas(){
   const totalCobrado=ventas.reduce((s,v)=>s+pagosDe(v),0);
   const totalPorCobrar=ventas.reduce((s,v)=>s+faltanteDe(v),0);
   let h=`<div class="topbar-desk"><div><h1>Ventas</h1><div class="sub">Seguimiento financiero de tus pedidos</div></div>
-    <button class="btn btn-primary" onclick="__nuevoPedidoManual()">＋ Nueva venta</button></div>`;
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG2" accept=".xlsx" style="display:none"></label>
+      <button class="btn btn-primary" onclick="__nuevoPedidoManual()">＋ Nueva venta</button>
+    </div></div>`;
   h+=`<div class="grid g3" style="margin-bottom:20px">
     ${kpiMini("Total cobrado","💵",fmt(totalCobrado),"var(--verde-claro)")}
     ${kpiMini("Por cobrar","⏳",fmt(totalPorCobrar),"var(--naranja-claro)")}
@@ -735,17 +797,18 @@ function renderVentas(){
   if(activos.length){ h+=`<div class="card" style="margin-bottom:16px"><div class="sec-head"><h2>⏳ Pendientes de pago</h2></div>${tablaPedidos(activos)}</div>`; }
   h+=`<div class="card"><div class="sec-head"><h2>✓ Saldados</h2></div>${saldados.length?tablaPedidos(saldados):'<div style="color:var(--gris);padding:10px">Aún no hay pedidos saldados.</div>'}</div>`;
   main.innerHTML=h;
+  $("impVG2").onchange=__importarVentasGastosExcel;
 }
 function tablaPedidos(lista){
-  let h=`<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Folio</th><th>Cliente</th><th>Total</th><th>Pagado</th><th>Falta</th><th>Producción</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive"><thead><tr><th>Folio</th><th>Cliente</th><th>Total</th><th>Pagado</th><th>Falta</th><th>Producción</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
     const prod=(v.estadoProd||"activo")==="completado"?'<span class="pill verde">Terminado</span>':'<span class="pill naranja">En producción</span>';
-    h+=`<tr class="click" onclick="__verPedido('${v.id}')"><td><b>${v.folio||'—'}</b></td><td>${v.cliente||'—'}</td>
-      <td>${fmt(v.total)}</td>
-      <td><div>${fmt(pag)}</div><div class="progress" style="width:70px"><div class="fill" style="width:${pct}%"></div></div></td>
-      <td>${falta>0.01?`<span class="pill naranja">${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`}</td>
-      <td>${prod}</td></tr>`;
+    h+=`<tr class="click" onclick="__verPedido('${v.id}')"><td data-label="Folio"><b>${v.folio||'—'}</b></td><td data-label="Cliente">${v.cliente||'—'}</td>
+      <td data-label="Total">${fmt(v.total)}</td>
+      <td data-label="Pagado"><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><div>${fmt(pag)}</div><div class="progress" style="width:70px"><div class="fill" style="width:${pct}%"></div></div></div></td>
+      <td data-label="Falta">${falta>0.01?`<span class="pill naranja">${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`}</td>
+      <td data-label="Producción">${prod}</td></tr>`;
   });
   return h+`</tbody></table></div>`;
 }
@@ -855,18 +918,22 @@ function renderGastos(){
   // por categoría
   const porCat={}; gastos.forEach(g=>{porCat[g.categoria||"Otro"]=(porCat[g.categoria||"Otro"]||0)+(+g.monto||0);});
   let h=`<div class="topbar-desk"><div><h1>Gastos</h1><div class="sub">${gastos.length} registros · ${fmt(total)} en total</div></div>
-    <button class="btn btn-primary" onclick="__nuevoGasto()">＋ Nuevo gasto</button></div>`;
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG3" accept=".xlsx" style="display:none"></label>
+      <button class="btn btn-primary" onclick="__nuevoGasto()">＋ Nuevo gasto</button>
+    </div></div>`;
   h+=`<div class="grid g3" style="margin-bottom:20px">
     ${kpiMini("Total gastado","📉",fmt(total),"var(--rojo-claro)")}
     ${kpiMini("Este mes","📅",fmt(gastosMes(new Date())),"var(--naranja-claro)")}
     ${kpiMini("Categorías","🗂️",Object.keys(porCat).length,"var(--violeta-claro)")}
   </div>`;
-  h+=`<div class="card"><div class="sec-head"><h2>Historial</h2></div><div class="tabla-wrap"><table class="tabla">
+  h+=`<div class="card"><div class="sec-head"><h2>Historial</h2></div><div class="tabla-wrap"><table class="tabla responsive">
     <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Método</th><th>Monto</th><th></th></tr></thead><tbody>`;
-  if(!lista.length) h+=`<tr><td colspan="6" style="color:var(--gris)">Sin gastos aún.</td></tr>`;
-  lista.forEach(g=>{ h+=`<tr><td>${fmtFecha(g.fecha)}</td><td><b>${g.concepto||'—'}</b></td><td><span class="pill violeta">${g.categoria||'Otro'}</span></td><td>${g.metodo||'—'}</td><td style="color:var(--rojo);font-weight:700">−${fmt(g.monto)}</td><td><button onclick="__borrarGasto('${g.id}')" style="color:var(--rojo)">✕</button></td></tr>`; });
+  if(!lista.length) h+=`<tr><td class="td-full" style="color:var(--gris)">Sin gastos aún.</td></tr>`;
+  lista.forEach(g=>{ h+=`<tr><td data-label="Fecha">${fmtFecha(g.fecha)}</td><td data-label="Concepto"><b>${g.concepto||'—'}</b></td><td data-label="Categoría"><span class="pill violeta">${g.categoria||'Otro'}</span></td><td data-label="Método">${g.metodo||'—'}</td><td data-label="Monto" style="color:var(--rojo);font-weight:700">−${fmt(g.monto)}</td><td data-label=""><button onclick="__borrarGasto('${g.id}')" style="color:var(--rojo)">✕</button></td></tr>`; });
   h+=`</tbody></table></div></div>`;
   main.innerHTML=h;
+  $("impVG3").onchange=__importarVentasGastosExcel;
 }
 function gastosMes(d){ const m=d.getMonth(),y=d.getFullYear(); return gastos.filter(g=>{if(!g.fecha)return false;const x=new Date(g.fecha+"T00:00:00");return x.getMonth()===m&&x.getFullYear()===y;}).reduce((s,g)=>s+(+g.monto||0),0); }
 let gastoItems=[]; // buffer temporal para nuevo gasto multi-item
@@ -934,7 +1001,8 @@ window.__borrarGasto=async(id)=>{ if(confirm("¿Eliminar este gasto?")){ await d
 function renderProductos(){
   const main=$("main");
   let h=`<div class="topbar-desk"><div><h1>Productos</h1><div class="sub">Precios que usa el cotizador · toca cualquiera para editar</div></div>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-amarillo btn-sm" onclick="__nuevoProductoCustom()">＋ Producto nuevo</button>
       <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar de Excel<input type="file" id="impExcel" accept=".xlsx" style="display:none"></label>
     </div></div>`;
   const grupos=[
@@ -956,8 +1024,17 @@ function renderProductos(){
     });
     h+=`</tbody></table></div>`;
   });
-  h+=`</div>
-    <div class="card" style="margin-top:16px"><h2 style="font-size:1rem;margin-bottom:8px">🎯 Calcomanías (por tamaño)</h2>
+  h+=`</div>`;
+  h+=`<div class="card" style="margin-top:16px"><div class="sec-head"><h2 style="font-size:1rem">🆕 Productos Personalizados</h2></div>
+    ${productosCustom.length?`<table class="tabla responsive"><thead><tr><th>Producto</th><th>Costo</th><th>Precio</th><th>Margen</th><th></th></tr></thead><tbody>
+      ${productosCustom.map(p=>{
+        const costo=(p.materiales||[]).reduce((s,m)=>s+(+m.cantidad||0)*(+m.costoUnitario||0),0)+(+p.manoObra||0)+(+p.otrosCostos||0);
+        const margen=p.precioVenta?((p.precioVenta-costo)/p.precioVenta*100):0;
+        return `<tr class="click" onclick="__editarProductoCustom('${p.id}')"><td data-label="Producto"><b>${p.nombre}</b></td><td data-label="Costo">${fmt2(costo)}</td><td data-label="Precio" style="font-weight:700">${fmt(p.precioVenta)}</td><td data-label="Margen"><span class="pill ${margen>=0?'verde':'rojo'}">${margen.toFixed(0)}%</span></td><td data-label="">›</td></tr>`;
+      }).join("")}
+    </tbody></table>`:'<div style="color:var(--gris);padding:6px 0;font-size:.88rem">Aún no agregas productos personalizados. Úsalo para artículos nuevos que no están en tu catálogo base (cake toppers, encargos especiales, etc.), con su propio desglose de materia prima.</div>'}
+  </div>`;
+  h+=`<div class="card" style="margin-top:16px"><h2 style="font-size:1rem;margin-bottom:8px">🎯 Calcomanías (por tamaño)</h2>
     <div class="tabla-wrap"><table class="tabla"><thead><tr><th>cm</th>${PRECIOS.calcomania.medidas.map(m=>`<th>${m}</th>`).join("")}</tr></thead><tbody>
     ${PRECIOS.calcomania.medidas.map((m,i)=>`<tr><td><b>${m}</b></td>${PRECIOS.calcomania.precios[i].map(p=>`<td>${fmt(p)}</td>`).join("")}</tr>`).join("")}
     </tbody></table></div><div style="font-size:.75rem;color:var(--gris);margin-top:8px">La matriz de calcomanías se edita en el código/Excel por ahora.</div></div>
@@ -990,6 +1067,93 @@ window.__resetPrecio=async(gid,item)=>{
 };
 
 /* Importar precios competitivos desde la Tabla Maestra (hoja Resumen General) */
+/* ===== Productos personalizados: constructor con detalle de materia prima ===== */
+let productoCustomBuffer=null; // {id?, nombre, precioVenta, materiales:[{materialId,nombre,cantidad,costoUnitario}], manoObra, otrosCostos, notas}
+
+window.__nuevoProductoCustom=()=>{
+  productoCustomBuffer={nombre:"",precioVenta:"",materiales:[],manoObra:0,otrosCostos:0,notas:""};
+  abrirModal(modalProductoCustomHTML());
+};
+window.__editarProductoCustom=(id)=>{
+  const p=productosCustom.find(x=>x.id===id); if(!p) return;
+  productoCustomBuffer=JSON.parse(JSON.stringify(p));
+  abrirModal(modalProductoCustomHTML());
+};
+
+function calcCostoBuffer(){
+  const b=productoCustomBuffer;
+  const matCost=(b.materiales||[]).reduce((s,m)=>s+(+m.cantidad||0)*(+m.costoUnitario||0),0);
+  const total=matCost+(+b.manoObra||0)+(+b.otrosCostos||0);
+  return {matCost,total};
+}
+
+function modalProductoCustomHTML(){
+  const b=productoCustomBuffer;
+  const {matCost,total}=calcCostoBuffer();
+  const precio=parseFloat(b.precioVenta)||0;
+  const utilidad=precio-total;
+  const margen=precio?utilidad/precio*100:0;
+  const opcionesMaterial=materia.slice().sort((a,b2)=>(a.nombre||"").localeCompare(b2.nombre||""));
+  return `<button class="modal-close" onclick="__cerrar()">✕</button>
+    <h2>${b.id?'Editar producto':'Producto nuevo'}</h2><div class="msub">Arma el costo real con tu materia prima</div>
+    <label>Nombre del producto</label><input id="pcNombre" value="${(b.nombre||'').replace(/"/g,'&quot;')}" oninput="__pcCampo('nombre',this.value)" placeholder="Ej. Cake Topper personalizado">
+    <label>Precio de venta al público ($)</label><input type="number" id="pcPrecio" value="${b.precioVenta||''}" oninput="__pcCampo('precioVenta',this.value)" placeholder="0">
+
+    <div style="background:var(--fondo);border-radius:14px;padding:14px;margin-top:16px">
+      <div style="font-weight:700;margin-bottom:8px">🧵 Materia prima usada</div>
+      ${(b.materiales||[]).length?b.materiales.map((m,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--linea);font-size:.87rem">
+        <div><b>${m.nombre}</b><div style="font-size:.72rem;color:var(--gris)">${m.cantidad} × ${fmt2(m.costoUnitario)} = ${fmt2(m.cantidad*m.costoUnitario)}</div></div>
+        <button onclick="__pcQuitarMaterial(${i})" style="color:var(--rojo)">✕</button></div>`).join(""):'<div style="color:var(--gris);font-size:.82rem">Sin materiales agregados.</div>'}
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--linea)">
+        <label style="margin-top:0">Material</label><select id="pcMatSel"><option value="">Elige de tu Materia Prima…</option>${opcionesMaterial.map(m=>`<option value="${m.id}">${m.nombre} (${fmt2(m.costoUnitario||0)})</option>`).join("")}</select>
+        <div class="grid g2" style="margin-top:8px"><div><label style="margin-top:0">Cantidad</label><input type="number" step="0.01" id="pcMatCant" value="1"></div><div><label style="margin-top:0">&nbsp;</label><button class="btn btn-ghost btn-block" onclick="__pcAgregarMaterial()">＋ Agregar</button></div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:700;font-size:.9rem"><span>Subtotal materiales</span><span>${fmt2(matCost)}</span></div>
+    </div>
+
+    <div class="grid g2" style="margin-top:14px">
+      <div><label style="margin-top:0">Mano de obra ($)</label><input type="number" id="pcManoObra" value="${b.manoObra||0}" oninput="__pcCampo('manoObra',this.value)"></div>
+      <div><label style="margin-top:0">Otros costos ($)</label><input type="number" id="pcOtros" value="${b.otrosCostos||0}" oninput="__pcCampo('otrosCostos',this.value)"></div>
+    </div>
+    <label>Notas (opcional)</label><textarea id="pcNotas" rows="2" oninput="__pcCampo('notas',this.value)">${b.notas||''}</textarea>
+
+    <div style="background:var(--violeta-claro);border-radius:14px;padding:14px;margin-top:16px">
+      <div class="quote-line"><span>Costo total</span><span><b>${fmt2(total)}</b></span></div>
+      <div class="quote-line"><span>Precio de venta</span><span>${fmt(precio)}</span></div>
+      <div class="quote-line" style="border-bottom:none"><span>Utilidad / Margen</span><span style="color:${utilidad>=0?'var(--verde)':'var(--rojo)'};font-weight:700">${fmt2(utilidad)} (${margen.toFixed(0)}%)</span></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" style="flex:1" onclick="__guardarProductoCustom()">Guardar producto</button>
+      ${b.id?`<button class="btn btn-peligro" onclick="__borrarProductoCustom('${b.id}')">Eliminar</button>`:''}
+    </div>`;
+}
+window.__pcCampo=(k,v)=>{ productoCustomBuffer[k]=v;
+  // refresco ligero: solo actualizamos los números sin redibujar el modal completo (evita perder foco al escribir)
+  const {matCost,total}=calcCostoBuffer();
+  const precio=parseFloat(productoCustomBuffer.precioVenta)||0;
+};
+window.__pcAgregarMaterial=()=>{
+  const sel=$("pcMatSel"); const id=sel.value; if(!id){ toast("Elige un material"); return; }
+  const mat=materia.find(m=>m.id===id); if(!mat) return;
+  const cant=parseFloat($("pcMatCant").value)||1;
+  productoCustomBuffer.materiales=productoCustomBuffer.materiales||[];
+  productoCustomBuffer.materiales.push({materialId:id,nombre:mat.nombre,cantidad:cant,costoUnitario:mat.costoUnitario||0});
+  $("modalPanel").innerHTML=modalProductoCustomHTML();
+};
+window.__pcQuitarMaterial=(i)=>{ productoCustomBuffer.materiales.splice(i,1); $("modalPanel").innerHTML=modalProductoCustomHTML(); };
+
+window.__guardarProductoCustom=async()=>{
+  const b=productoCustomBuffer;
+  b.nombre=$("pcNombre").value.trim(); b.precioVenta=parseFloat($("pcPrecio").value)||0;
+  b.manoObra=parseFloat($("pcManoObra").value)||0; b.otrosCostos=parseFloat($("pcOtros").value)||0; b.notas=$("pcNotas").value.trim();
+  if(!b.nombre){ toast("Ponle nombre al producto"); return; }
+  const datos={nombre:b.nombre,precioVenta:b.precioVenta,materiales:b.materiales||[],manoObra:b.manoObra,otrosCostos:b.otrosCostos,notas:b.notas||null};
+  if(b.id) await updateDoc(doc(db,"productosCustom",b.id),datos);
+  else await addDoc(collection(db,"productosCustom"),datos);
+  cerrarModal(); toast("Producto guardado ✓");
+};
+window.__borrarProductoCustom=async(id)=>{ if(confirm("¿Eliminar este producto?")){ await deleteDoc(doc(db,"productosCustom",id)); cerrarModal(); toast("Producto eliminado"); } };
+
 window.__importarExcel=(e)=>{
   const file=e.target.files[0]; if(!file) return;
   const reader=new FileReader();
@@ -1031,9 +1195,9 @@ function renderMateria(){
   const lista=[...materia].sort((a,b)=>(a.nombre||"").localeCompare(b.nombre||""));
   let h=`<div class="topbar-desk"><div><h1>Materia Prima</h1><div class="sub">${materia.length} insumos registrados</div></div>
     <button class="btn btn-primary" onclick="__nuevoInsumo()">＋ Agregar insumo</button></div>`;
-  h+=`<div class="card"><div class="tabla-wrap"><table class="tabla"><thead><tr><th>Material</th><th>Costo paquete</th><th>Rendimiento</th><th>Costo unitario</th><th></th></tr></thead><tbody>`;
-  if(!lista.length) h+=`<tr><td colspan="5" style="color:var(--gris)">Sin insumos. Se cargan del catálogo inicial.</td></tr>`;
-  lista.forEach(m=>{ h+=`<tr class="click" onclick="__editarInsumo('${m.id}')"><td><b>${m.nombre}</b></td><td>${m.costoPaquete!=null?fmt2(m.costoPaquete):'—'}</td><td>${m.rendimiento||'—'}</td><td style="font-weight:700">${m.costoUnitario!=null?fmt2(m.costoUnitario):'—'}</td><td style="color:var(--violeta)">›</td></tr>`; });
+  h+=`<div class="card"><div class="tabla-wrap"><table class="tabla responsive"><thead><tr><th>Material</th><th>Costo paquete</th><th>Rendimiento</th><th>Costo unitario</th><th></th></tr></thead><tbody>`;
+  if(!lista.length) h+=`<tr><td class="td-full" style="color:var(--gris)">Sin insumos. Se cargan del catálogo inicial.</td></tr>`;
+  lista.forEach(m=>{ h+=`<tr class="click" onclick="__editarInsumo('${m.id}')"><td data-label="Material"><b>${m.nombre}</b></td><td data-label="Costo paquete">${m.costoPaquete!=null?fmt2(m.costoPaquete):'—'}</td><td data-label="Rendimiento">${m.rendimiento||'—'}</td><td data-label="Costo unitario" style="font-weight:700">${m.costoUnitario!=null?fmt2(m.costoUnitario):'—'}</td><td data-label="">›</td></tr>`; });
   h+=`</tbody></table></div></div>`;
   main.innerHTML=h;
 }
@@ -1130,6 +1294,94 @@ function chartOpts(noGrid){
 /* =====================================================================
    MÉTRICAS
    ===================================================================== */
+
+/* =====================================================================
+   IMPORTAR desde Excel — Ventas, Pedidos y Gastos
+   Espera el formato de tu "Registro_de_Ventas_e_Ingresos.xlsx":
+   hoja "Registro de Ventas e Ingresos" (Gasto + abonos de Venta) y
+   hoja "Pedidos" (folio -> cliente/productos/total/detalles).
+   ===================================================================== */
+function catInferida(concepto){
+  const c=(concepto||"").toLowerCase();
+  if(/cricut|prensa|impresora|brother|maker|equipo|maquina/.test(c)) return "Herramienta/Equipo";
+  if(/amazon|mercado libre|material|tela|vinil|hilo/.test(c)) return "Material";
+  if(/etsy|diseñ|disenio|licencia/.test(c)) return "Diseños/Licencias";
+  if(/envio|paqueter|dhl|fedex/.test(c)) return "Envíos";
+  if(/publicidad|ads|marketing/.test(c)) return "Publicidad";
+  return "Otro";
+}
+function fechaCelda(v){
+  if(v==null) return hoy();
+  if(v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,"0")}-${String(v.getDate()).padStart(2,"0")}`;
+  if(typeof v==="number"){ const d=XLSX.SSF.parse_date_code(v); return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`; }
+  return String(v);
+}
+
+window.__importarVentasGastosExcel=(e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async(ev)=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:"binary",cellDates:true});
+      const wsReg=wb.Sheets["Registro de Ventas e Ingresos"];
+      const wsPed=wb.Sheets["Pedidos"];
+      if(!wsReg && !wsPed){ toast("No encontré las hojas 'Registro de Ventas e Ingresos' o 'Pedidos'"); return; }
+
+      let nuevosGastos=0, nuevosPedidos=0;
+      const batch=writeBatch(db);
+      const foliosVentaExistentes=new Set(ventas.map(v=>v.folio));
+      const foliosGastoExistentes=new Set(gastos.map(g=>g.folio));
+
+      // --- 1) Gastos + abonos de Venta, desde "Registro de Ventas e Ingresos" ---
+      const abonosPorFolio={}; // folio -> [{monto,metodo,fecha}]
+      if(wsReg){
+        const rows=XLSX.utils.sheet_to_json(wsReg,{header:1});
+        for(const r of rows.slice(2)){ // salta encabezado + fila de capital inicial
+          const [fecha,tipo,folio,conceptoVenta,conceptoPago,comprador,metodo,total]=r;
+          if(!tipo) continue;
+          if(tipo==="Gasto"){
+            if(folio && foliosGastoExistentes.has(folio)) continue; // evita duplicar
+            batch.set(doc(collection(db,"gastos")),{folio:folio||null,fecha:fechaCelda(fecha),concepto:conceptoVenta||"Gasto importado",categoria:catInferida(conceptoVenta),metodo:metodo||"Transferencia",monto:+total||0});
+            nuevosGastos++;
+          } else if(tipo==="Venta" && folio){
+            (abonosPorFolio[folio]=abonosPorFolio[folio]||[]).push({monto:+total||0,metodo:metodo||"Transferencia",fecha:fechaCelda(fecha)});
+          }
+        }
+      }
+      // --- 2) Pedidos (folio -> cliente/productos/total/detalles) ---
+      const conflictos=[]; // folios donde el detalle de abonos no cuadraba con "Abonado a la fecha"
+      if(wsPed){
+        const rows=XLSX.utils.sheet_to_json(wsPed,{header:1});
+        for(const r of rows.slice(1)){
+          const [fecha,folio,cliente,productos,metodoGeneral,abonado,totalPedido,faltante,detalles]=r;
+          if(!folio) continue;
+          if(foliosVentaExistentes.has(folio)) continue; // evita duplicar si ya existe
+          const ab=+abonado||0;
+          let pagos=abonosPorFolio[folio]||[];
+          const sumaLedger=pagos.reduce((s,p)=>s+p.monto,0);
+          // Si el detalle de abonos (ledger) no cuadra con el "Abonado a la fecha" de tu hoja Pedidos,
+          // confiamos en el resumen (más seguro) y marcamos el folio para que lo revises.
+          if(Math.abs(sumaLedger-ab)>0.5){
+            conflictos.push(folio);
+            pagos = ab>0 ? [{monto:ab,metodo:metodoGeneral||"Transferencia",fecha:fechaCelda(fecha)}] : [];
+          }
+          batch.set(doc(collection(db,"ventas")),{
+            folio, fecha:fechaCelda(fecha), cliente:cliente||"—", productos:productos||"",
+            detalles:detalles||"", total:+totalPedido||0, pagos, estadoProd:"activo", referido:null
+          });
+          nuevosPedidos++;
+        }
+      }
+      if(!nuevosGastos && !nuevosPedidos){ toast("No había nada nuevo que importar (folios ya existentes)"); return; }
+      await batch.commit();
+      let msg=`Importado: ${nuevosPedidos} pedido(s), ${nuevosGastos} gasto(s) ✨`;
+      if(conflictos.length) msg+=` · Revisa abonos de: ${conflictos.join(", ")}`;
+      toast(msg);
+    }catch(err){ console.error(err); toast("Error leyendo el Excel — revisa el formato"); }
+  };
+  reader.readAsBinaryString(file);
+};
+
 function exportarExcel(){
   const wb=XLSX.utils.book_new();
   // Ventas
@@ -1210,6 +1462,7 @@ function escuchar(){
   wire("ventas",d=>ventas=d);
   wire("gastos",d=>gastos=d);
   wire("materiaPrima",d=>materia=d);
+  wire("productosCustom",d=>productosCustom=d);
   subs.push(onSnapshot(doc(db,"config","general"),s=>{if(s.exists())config=s.data(); if(vistaActual==="dashboard"&&!$("app").classList.contains("oculto"))renderDashboard();}));
   subs.push(onSnapshot(doc(db,"config","precios"),s=>{ preciosOverride = s.exists()?s.data():{}; if(!$("app").classList.contains("oculto")&&(vistaActual==="productos"||vistaActual==="cotizar")) VISTAS[vistaActual]?.(); }));
 }
