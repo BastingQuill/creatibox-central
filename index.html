@@ -886,6 +886,7 @@ window.__verPedido=(id)=>{
     ${falta>0.01?`<div style="background:var(--verde-claro);border-radius:14px;padding:14px;margin-top:14px">
       <label style="margin-top:0">Registrar nuevo abono</label>
       <div class="grid g2"><input type="number" id="nvAbono" placeholder="Monto ($)"><select id="nvMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
+      <label style="margin-top:10px">Fecha del abono</label><input type="date" id="nvFecha" value="${hoy()}">
       <button class="btn btn-verde btn-block" style="margin-top:10px" onclick="__agregarAbono('${id}')">＋ Agregar abono</button></div>`:'<div class="pill verde" style="margin-top:14px">✓ Pedido saldado completamente</div>'}
     <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
       ${!completado?`<button class="btn btn-verde" style="flex:1;min-width:120px" onclick="__marcarCompletado('${id}');__cerrar()">✓ Marcar terminado</button>`:''}
@@ -895,7 +896,7 @@ window.__verPedido=(id)=>{
 window.__agregarAbono=async(id)=>{
   const v=ventas.find(x=>x.id===id); const m=parseFloat($("nvAbono").value);
   if(!m||m<=0){ toast("Ingresa un monto válido"); return; }
-  const pagos=[...(v.pagos||[]),{monto:m,metodo:$("nvMetodo").value,fecha:hoy()}];
+  const pagos=[...(v.pagos||[]),{monto:m,metodo:$("nvMetodo").value,fecha:$("nvFecha").value||hoy()}];
   await updateDoc(doc(db,"ventas",id),{pagos}); toast("Abono registrado 💵"); __verPedido(id);
 };
 window.__borrarAbono=async(id,i)=>{
