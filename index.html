@@ -1460,11 +1460,27 @@ $("btnMas").onclick=()=>{
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('ventas')">💰 Ventas</button>
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('productos')">📦 Productos</button>
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('materia')">🧵 Materia Prima</button>
-      <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__cerrar();exportarExcel()">⬇️ Exportar Excel</button>
-      <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start;color:var(--rojo)" onclick="__cerrar();if(confirm('¿Cerrar sesión?'))signOut(auth);">⏻ Salir</button>
+      <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__cerrarYAccion(exportarExcel)">⬇️ Exportar Excel</button>
+      <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start;color:var(--rojo)" onclick="__cerrarYAccion(()=>{if(confirm('¿Cerrar sesión?'))signOut(auth);})">⏻ Salir</button>
     </div>`);
 };
-window.__irVistaYCerrar=(v)=>{ cerrarModal(); irVista(v); };
+window.__cerrarYAccion=(fn)=>{
+  cerrarModal(true);
+  if(history.state && history.state.modal) history.back(); // limpiamos el paso del modal
+  setTimeout(fn,0); // ejecutamos la acción despues del popstate
+};
+window.__irVistaYCerrar=(v)=>{
+  // Cerrar el modal de forma "silenciosa" (sin disparar history.back), y en el mismo
+  // history.back consumimos el paso del modal para que quede consistente.
+  cerrarModal(true);
+  if(history.state && history.state.modal){
+    // Reemplazamos el estado del modal por la nueva vista, evitando la carrera con popstate.
+    history.replaceState({vista:v},"","#"+v);
+    irVista(v,true);
+  } else {
+    irVista(v);
+  }
+};
 $("btnExcel").onclick=exportarExcel;
 $("btnSalir").onclick=()=>{ if(confirm("¿Cerrar sesión?")) signOut(auth); };
 
