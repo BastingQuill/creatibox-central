@@ -26,7 +26,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:16px}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--fondo);color:var(--tinta);min-height:100vh}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--fondo);color:var(--tinta);min-height:100vh;overflow-x:hidden}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input,select,textarea{font-family:inherit;font-size:1rem;width:100%;padding:13px 15px;border:1.5px solid var(--linea);border-radius:var(--radius-sm);background:var(--blanco);color:var(--tinta);transition:border-color .15s}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--violeta)}
@@ -49,7 +49,9 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .sidebar .abajo{margin-top:auto;padding-top:12px;border-top:1px solid var(--linea)}
 
 /* Main */
-.main{flex:1;margin-left:240px;padding:26px 30px 40px;max-width:1180px}
+.main{flex:1;margin-left:240px;padding:26px 30px 40px;max-width:1180px;min-width:0}
+.matriz-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.matriz-scroll table{min-width:560px}
 .topbar-desk{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
 .topbar-desk h1{font-size:1.55rem;font-weight:800}
 .topbar-desk .sub{color:var(--gris);font-size:.88rem;margin-top:2px;font-weight:500}
@@ -301,8 +303,16 @@ let vistaActual="dashboard";
 let charts={};
 
 function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("ver"); setTimeout(()=>t.classList.remove("ver"),2500); }
-function abrirModal(html){ $("modalPanel").innerHTML = html; $("modal").classList.add("abierto"); }
-function cerrarModal(){ $("modal").classList.remove("abierto"); }
+function abrirModal(html,_desdeHistorial){
+  $("modalPanel").innerHTML = html; $("modal").classList.add("abierto");
+  // Un modal abierto también cuenta como "un paso" -> el botón atrás del celular lo cierra primero,
+  // no cierra la app de una vez.
+  if(!_desdeHistorial) history.pushState({modal:true,vista:vistaActual},"","#"+vistaActual+"-modal");
+}
+function cerrarModal(_desdeHistorial){
+  $("modal").classList.remove("abierto");
+  if(!_desdeHistorial && history.state && history.state.modal) history.back();
+}
 $("modal").addEventListener("click", e=>{ if(e.target===$("modal")) cerrarModal(); });
 
 /* Capital acumulado en tiempo real */
@@ -894,16 +904,30 @@ window.__borrarAbono=async(id,i)=>{
 };
 window.__borrarPedido=async(id)=>{ if(confirm("¿Eliminar este pedido?")){ await deleteDoc(doc(db,"ventas",id)); cerrarModal(); toast("Pedido eliminado"); } };
 window.__editarPedido=(id)=>{ const v=ventas.find(x=>x.id===id);
-  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Editar pedido</h2>
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Editar pedido</h2><div class="msub">Puedes corregir cualquier dato del pedido</div>
+    <label>Folio</label><input id="ePFolio" value="${(v.folio||'').replace(/"/g,'&quot;')}">
+    <label>Fecha</label><input type="date" id="ePFecha" value="${v.fecha||hoy()}">
     <label>Cliente</label><input id="ePCliente" value="${(v.cliente||'').replace(/"/g,'&quot;')}">
-    <label>Productos</label><textarea id="ePProd" rows="2">${v.productos||''}</textarea>
-    <label>Detalles</label><textarea id="ePDet" rows="2">${v.detalles||''}</textarea>
-    <label>Total ($)</label><input type="number" id="ePTotal" value="${v.total||0}">
+    <label>Productos / concepto</label><textarea id="ePProd" rows="2">${v.productos||''}</textarea>
+    <label>Detalles adicionales</label><textarea id="ePDet" rows="2">${v.detalles||''}</textarea>
+    <label>Precio total del pedido ($)</label><input type="number" id="ePTotal" value="${v.total||0}">
+    <label>Referido por (opcional)</label><input id="ePRef" value="${(v.referido||'').replace(/"/g,'&quot;')}">
+    <label>Estado de producción</label><select id="ePEstado">
+      <option value="activo" ${(v.estadoProd||'activo')==='activo'?'selected':''}>En producción</option>
+      <option value="completado" ${v.estadoProd==='completado'?'selected':''}>Completado</option>
+    </select>
     <div style="margin-top:18px"><button class="btn btn-primary btn-block" onclick="__guardarEdicionPedido('${id}')">Guardar cambios</button></div>`);
 };
 window.__guardarEdicionPedido=async(id)=>{
-  await updateDoc(doc(db,"ventas",id),{cliente:$("ePCliente").value.trim(),productos:$("ePProd").value.trim(),detalles:$("ePDet").value.trim(),total:parseFloat($("ePTotal").value)||0});
-  toast("Cambios guardados"); __verPedido(id);
+  const cliente=$("ePCliente").value.trim();
+  if(!cliente){ toast("Ponle nombre al cliente"); return; }
+  await updateDoc(doc(db,"ventas",id),{
+    folio:$("ePFolio").value.trim(), fecha:$("ePFecha").value, cliente,
+    productos:$("ePProd").value.trim(), detalles:$("ePDet").value.trim(),
+    total:parseFloat($("ePTotal").value)||0, referido:$("ePRef").value.trim()||null,
+    estadoProd:$("ePEstado").value
+  });
+  toast("Cambios guardados ✓"); __verPedido(id);
 };
 window.__cerrar=cerrarModal;
 
@@ -1035,7 +1059,7 @@ function renderProductos(){
     </tbody></table>`:'<div style="color:var(--gris);padding:6px 0;font-size:.88rem">Aún no agregas productos personalizados. Úsalo para artículos nuevos que no están en tu catálogo base (cake toppers, encargos especiales, etc.), con su propio desglose de materia prima.</div>'}
   </div>`;
   h+=`<div class="card" style="margin-top:16px"><h2 style="font-size:1rem;margin-bottom:8px">🎯 Calcomanías (por tamaño)</h2>
-    <div class="tabla-wrap"><table class="tabla"><thead><tr><th>cm</th>${PRECIOS.calcomania.medidas.map(m=>`<th>${m}</th>`).join("")}</tr></thead><tbody>
+    <div class="matriz-scroll"><table class="tabla"><thead><tr><th>cm</th>${PRECIOS.calcomania.medidas.map(m=>`<th>${m}</th>`).join("")}</tr></thead><tbody>
     ${PRECIOS.calcomania.medidas.map((m,i)=>`<tr><td><b>${m}</b></td>${PRECIOS.calcomania.precios[i].map(p=>`<td>${fmt(p)}</td>`).join("")}</tr>`).join("")}
     </tbody></table></div><div style="font-size:.75rem;color:var(--gris);margin-top:8px">La matriz de calcomanías se edita en el código/Excel por ahora.</div></div>
     <div style="font-size:.8rem;color:var(--gris);margin-top:14px;padding:0 4px">💡 <b>Editar:</b> toca un precio y cámbialo — se guarda para ti y Paola al instante. <b>Importar:</b> sube tu Tabla Maestra y jala los precios competitivos de la hoja "Resumen General" automáticamente.</div>`;
@@ -1412,7 +1436,7 @@ function exportarExcel(){
    NAVEGACIÓN + ARRANQUE
    ===================================================================== */
 const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,pedidos:renderPedidos,ventas:renderVentas,gastos:renderGastos,productos:renderProductos,materia:renderMateria};
-function irVista(v){
+function irVista(v,_desdeHistorial){
   vistaActual=v;
   Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={};
   document.querySelectorAll(".nav-item[data-vista]").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
@@ -1421,6 +1445,12 @@ function irVista(v){
   const btnMas=$("btnMas"); if(btnMas) btnMas.classList.toggle("activo",esMas);
   (VISTAS[v]||renderDashboard)();
   window.scrollTo(0,0);
+  // Registrar el cambio de sección como un paso real de navegación,
+  // así el botón/gesto de "atrás" del celular regresa aquí en vez de cerrar la app.
+  if(!_desdeHistorial){
+    if(history.state && history.state.vista===v){ history.replaceState({vista:v},"","#"+v); }
+    else history.pushState({vista:v},"","#"+v);
+  }
 }
 window.__irVista=irVista;
 document.querySelectorAll("[data-vista]").forEach(b=>b.onclick=()=>irVista(b.dataset.vista));
@@ -1473,13 +1503,27 @@ onAuthStateChanged(auth,async user=>{
     $("vLogin").classList.add("oculto"); $("app").classList.remove("oculto"); $("botnav").classList.remove("oculto");
     escuchar();
     await sembrarSiVacio();
-    irVista("dashboard");
+    // "dashboard" es la raíz de la navegación: reemplaza (no apila) para que el
+    // primer toque de "atrás" desde aquí sí pueda salir de la app, como es normal.
+    history.replaceState({vista:"dashboard"},"","#dashboard");
+    irVista("dashboard",true);
   } else {
     $("vLogin").classList.remove("oculto"); $("app").classList.add("oculto"); $("botnav").classList.add("oculto");
   }
 });
 $("btnLogin").onclick=async()=>{ $("loginErr").textContent=""; try{ await signInWithEmailAndPassword(auth,$("loginEmail").value.trim(),$("loginPass").value); }catch(e){ $("loginErr").textContent="Correo o contraseña incorrectos."; } };
 $("loginPass").addEventListener("keydown",e=>{ if(e.key==="Enter")$("btnLogin").click(); });
+
+/* Botón/gesto de "atrás" del celular: primero cierra modales, luego navega entre secciones,
+   y solo sale de la app cuando ya no hay nada más atrás (como cualquier app real). */
+window.addEventListener("popstate",(e)=>{
+  if($("modal").classList.contains("abierto")){
+    cerrarModal(true); // ya lo cerró el navegador al retroceder, no volvemos a hacer history.back()
+    return;
+  }
+  const v=(e.state&&e.state.vista)||"dashboard";
+  if($("app") && !$("app").classList.contains("oculto")) irVista(v,true);
+});
 window.addEventListener("unhandledrejection",e=>{ console.error("PROMESA",e.reason); });
 </script>
 </body>
