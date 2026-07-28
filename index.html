@@ -729,11 +729,20 @@ window.__enviarWhatsCliente=()=>{
 };
 
 window.__confirmarPedidoDesdeCarrito=()=>{
-  cerrarModal();
   const items = carrito.map(x=>({etiqueta:x.etiqueta,cant:x.cant,base:x.base,desc:x.desc||0,total:x.total,notas:(x.notas||[]).join(' · ')}));
   const total = totalCarrito();
   const resumen = items.map(i=>`${i.cant}× ${i.etiqueta}`).join(' · ');
-  abrirModalPedido({items, total, resumen});
+  // Cerrar el modal actual silenciosamente y abrir el de pedido en el siguiente tick,
+  // para que el pushState del nuevo modal no compita con el popstate del cierre.
+  cerrarModal(true);
+  const abrirDespues=()=>abrirModalPedido({items, total, resumen});
+  if(history.state && history.state.modal){
+    const onPop=()=>{ window.removeEventListener("popstate",onPop); abrirDespues(); };
+    window.addEventListener("popstate",onPop);
+    history.back();
+  } else {
+    setTimeout(abrirDespues,0);
+  }
 };
 
 /* =====================================================================
