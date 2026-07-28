@@ -181,6 +181,19 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   .tabla.responsive td[data-label=""]::before, .tabla.responsive td:not([data-label])::before{content:""}
   .tabla.responsive td.td-full{display:block;text-align:left}
   .tabla.responsive td.td-full::before{display:none}
+@media(min-width:861px){.tabla.acordeon td.acc-head{display:none}.tabla.acordeon tr.expandida td.td-full{display:none}.tabla.acordeon td.td-full{display:none}}
+  /* Acordeón móvil: solo 1 fila compacta visible, resto oculto hasta expandir */
+  .tabla.acordeon tr{padding:0;overflow:hidden}
+  .tabla.acordeon tr td{display:none}
+  .tabla.acordeon tr td.acc-head{display:flex;padding:14px 14px;align-items:center;gap:10px;justify-content:space-between;text-align:left;border-bottom:none;cursor:pointer}
+  .tabla.acordeon tr td.acc-head::before{display:none}
+  .tabla.acordeon tr td.acc-head .caret{color:var(--gris-claro);font-size:.9rem;transition:transform .2s}
+  .tabla.acordeon tr.expandida{background:var(--fondo)}
+  .tabla.acordeon tr.expandida td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px dashed var(--linea);text-align:right;font-size:.85rem}
+  .tabla.acordeon tr.expandida td::before{content:attr(data-label);font-size:.7rem;font-weight:700;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.03em;text-align:left;flex-shrink:0}
+  .tabla.acordeon tr.expandida td.acc-head{background:var(--blanco);border-bottom:1px solid var(--linea)}
+  .tabla.acordeon tr.expandida td.acc-head .caret{transform:rotate(90deg)}
+  .tabla.acordeon tr.expandida td:last-child{border-bottom:none}
   .modal{align-items:flex-end;padding:0}
   .modal-panel{max-width:100%;border-radius:24px 24px 0 0;max-height:92vh}
 }
@@ -776,16 +789,23 @@ function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="c
 function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
 
 function tablaPedidosProd(lista,completado){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive"><thead><tr><th>Folio</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Pago</th><th></th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Pago</th><th></th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v), falta=faltanteDe(v);
     const pagoTag = falta>0.01?`<span class="pill naranja">Falta ${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`;
-    h+=`<tr class="click" onclick="__verPedido('${v.id}')">
-      <td data-label="Folio"><b>${v.folio||'—'}</b><div style="font-size:.72rem;color:var(--gris)">${fmtFecha(v.fecha)}</div></td>
-      <td data-label="Cliente">${v.cliente||'—'}</td>
-      <td data-label="Productos" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem">${v.productos||'—'}</td>
-      <td data-label="Total">${fmt(v.total)}</td><td data-label="Pago">${pagoTag}</td>
-      <td data-label="">${completado?'<span class="pill verde">Terminado</span>':`<button class="btn btn-sm btn-verde" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Terminar</button>`}</td>
+    h+=`<tr onclick="__togglePedido(this,'${v.id}')">
+      <td class="acc-head">
+        <div style="flex:1;min-width:0"><div style="font-weight:800">${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.cliente||'—'}</div></div>
+        <span class="caret">▸</span>
+      </td>
+      <td data-label="Fecha">${fmtFecha(v.fecha)}</td>
+      <td data-label="Productos" style="text-align:right;font-size:.85rem">${v.productos||'—'}</td>
+      <td data-label="Total"><b>${fmt(v.total)}</b></td>
+      <td data-label="Pago">${pagoTag}</td>
+      <td class="td-full" style="text-align:center;padding-top:10px">
+        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Ver detalle</button>
+        ${completado?'<span class="pill verde" style="margin-left:8px">Terminado</span>':`<button class="btn btn-sm btn-verde" style="margin-left:8px" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Terminar</button>`}
+      </td>
     </tr>`;
   });
   return h+`</tbody></table></div>`;
@@ -819,15 +839,25 @@ function renderVentas(){
   $("impVG2").onchange=__importarVentasGastosExcel;
 }
 function tablaPedidos(lista){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive"><thead><tr><th>Folio</th><th>Cliente</th><th>Total</th><th>Pagado</th><th>Falta</th><th>Producción</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Total</th><th>Pagado</th><th>Falta</th><th>Producción</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
     const prod=(v.estadoProd||"activo")==="completado"?'<span class="pill verde">Terminado</span>':'<span class="pill naranja">En producción</span>';
-    h+=`<tr class="click" onclick="__verPedido('${v.id}')"><td data-label="Folio"><b>${v.folio||'—'}</b></td><td data-label="Cliente">${v.cliente||'—'}</td>
-      <td data-label="Total">${fmt(v.total)}</td>
+    const estadoPago=falta>0.01?`<span class="pill naranja">${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`;
+    h+=`<tr onclick="__togglePedido(this,'${v.id}')">
+      <td class="acc-head">
+        <div style="flex:1;min-width:0"><div style="font-weight:800">${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.cliente||'—'}</div></div>
+        <span class="caret">▸</span>
+      </td>
+      <td data-label="Fecha">${fmtFecha(v.fecha)}</td>
+      <td data-label="Total"><b>${fmt(v.total)}</b></td>
       <td data-label="Pagado"><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><div>${fmt(pag)}</div><div class="progress" style="width:70px"><div class="fill" style="width:${pct}%"></div></div></div></td>
-      <td data-label="Falta">${falta>0.01?`<span class="pill naranja">${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`}</td>
-      <td data-label="Producción">${prod}</td></tr>`;
+      <td data-label="Falta">${estadoPago}</td>
+      <td data-label="Producción">${prod}</td>
+      <td class="td-full" style="text-align:center;padding-top:10px">
+        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Ver detalle / abonar</button>
+      </td>
+    </tr>`;
   });
   return h+`</tbody></table></div>`;
 }
@@ -941,6 +971,18 @@ window.__guardarEdicionPedido=async(id)=>{
 };
 window.__cerrar=cerrarModal;
 
+/* Acordeón: en móvil, tocar la fila la expande/contrae. En desktop, abre el detalle. */
+window.__togglePedido=(tr,id)=>{
+  if(window.innerWidth>860){ __verPedido(id); return; }
+  document.querySelectorAll(".tabla.acordeon tr.expandida").forEach(r=>{ if(r!==tr) r.classList.remove("expandida"); });
+  tr.classList.toggle("expandida");
+};
+window.__toggleGasto=(tr,id)=>{
+  if(window.innerWidth>860){ __editarGasto(id); return; }
+  document.querySelectorAll(".tabla.acordeon tr.expandida").forEach(r=>{ if(r!==tr) r.classList.remove("expandida"); });
+  tr.classList.toggle("expandida");
+};
+
 /* =====================================================================
    GASTOS
    ===================================================================== */
@@ -961,10 +1003,24 @@ function renderGastos(){
     ${kpiMini("Este mes","📅",fmt(gastosMes(new Date())),"var(--naranja-claro)")}
     ${kpiMini("Categorías","🗂️",Object.keys(porCat).length,"var(--violeta-claro)")}
   </div>`;
-  h+=`<div class="card"><div class="sec-head"><h2>Historial</h2></div><div class="tabla-wrap"><table class="tabla responsive">
+  h+=`<div class="card"><div class="sec-head"><h2>Historial</h2></div><div class="tabla-wrap"><table class="tabla responsive acordeon">
     <thead><tr><th>Folio</th><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Método</th><th>Monto</th><th></th></tr></thead><tbody>`;
   if(!lista.length) h+=`<tr><td class="td-full" style="color:var(--gris)">Sin gastos aún.</td></tr>`;
-  lista.forEach(g=>{ h+=`<tr class="click" onclick="__editarGasto('${g.id}')"><td data-label="Folio"><b>${g.folio||'—'}</b></td><td data-label="Fecha">${fmtFecha(g.fecha)}</td><td data-label="Concepto"><b>${g.concepto||'—'}</b></td><td data-label="Categoría"><span class="pill violeta">${g.categoria||'Otro'}</span></td><td data-label="Método">${g.metodo||'—'}</td><td data-label="Monto" style="color:var(--rojo);font-weight:700">−${fmt(g.monto)}</td><td data-label=""><button onclick="event.stopPropagation();__borrarGasto('${g.id}')" style="color:var(--rojo)">✕</button></td></tr>`; });
+  lista.forEach(g=>{ h+=`<tr onclick="__toggleGasto(this,'${g.id}')">
+      <td class="acc-head">
+        <div style="flex:1;min-width:0"><div style="font-weight:800">${g.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.concepto||'—'}</div></div>
+        <span class="caret">▸</span>
+      </td>
+      <td data-label="Fecha">${fmtFecha(g.fecha)}</td>
+      <td data-label="Concepto"><b>${g.concepto||'—'}</b></td>
+      <td data-label="Categoría"><span class="pill violeta">${g.categoria||'Otro'}</span></td>
+      <td data-label="Método">${g.metodo||'—'}</td>
+      <td data-label="Monto" style="color:var(--rojo);font-weight:700">−${fmt(g.monto)}</td>
+      <td class="td-full" style="text-align:center;padding-top:10px">
+        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__editarGasto('${g.id}')">Editar</button>
+        <button class="btn btn-sm btn-peligro" style="margin-left:8px" onclick="event.stopPropagation();__borrarGasto('${g.id}')">Eliminar</button>
+      </td>
+    </tr>`; });
   h+=`</tbody></table></div></div>`;
   main.innerHTML=h;
   $("impVG3").onchange=__importarVentasGastosExcel;
