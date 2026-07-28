@@ -954,7 +954,7 @@ function renderGastos(){
   h+=`<div class="card"><div class="sec-head"><h2>Historial</h2></div><div class="tabla-wrap"><table class="tabla responsive">
     <thead><tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Método</th><th>Monto</th><th></th></tr></thead><tbody>`;
   if(!lista.length) h+=`<tr><td class="td-full" style="color:var(--gris)">Sin gastos aún.</td></tr>`;
-  lista.forEach(g=>{ h+=`<tr><td data-label="Fecha">${fmtFecha(g.fecha)}</td><td data-label="Concepto"><b>${g.concepto||'—'}</b></td><td data-label="Categoría"><span class="pill violeta">${g.categoria||'Otro'}</span></td><td data-label="Método">${g.metodo||'—'}</td><td data-label="Monto" style="color:var(--rojo);font-weight:700">−${fmt(g.monto)}</td><td data-label=""><button onclick="__borrarGasto('${g.id}')" style="color:var(--rojo)">✕</button></td></tr>`; });
+  lista.forEach(g=>{ h+=`<tr class="click" onclick="__editarGasto('${g.id}')"><td data-label="Fecha">${fmtFecha(g.fecha)}</td><td data-label="Concepto"><b>${g.concepto||'—'}</b></td><td data-label="Categoría"><span class="pill violeta">${g.categoria||'Otro'}</span></td><td data-label="Método">${g.metodo||'—'}</td><td data-label="Monto" style="color:var(--rojo);font-weight:700">−${fmt(g.monto)}</td><td data-label=""><button onclick="event.stopPropagation();__borrarGasto('${g.id}')" style="color:var(--rojo)">✕</button></td></tr>`; });
   h+=`</tbody></table></div></div>`;
   main.innerHTML=h;
   $("impVG3").onchange=__importarVentasGastosExcel;
@@ -1018,6 +1018,37 @@ window.__guardarGasto=async()=>{
 };
 
 window.__borrarGasto=async(id)=>{ if(confirm("¿Eliminar este gasto?")){ await deleteDoc(doc(db,"gastos",id)); toast("Gasto eliminado"); } };
+
+window.__editarGasto=(id)=>{
+  const g=gastos.find(x=>x.id===id); if(!g) return;
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Editar gasto</h2><div class="msub">Corrige cualquier dato del gasto</div>
+    <label>Folio</label><input id="egFolio" value="${(g.folio||'').replace(/"/g,'&quot;')}">
+    <label>Fecha</label><input type="date" id="egFecha" value="${g.fecha||hoy()}">
+    <label>Concepto</label><input id="egConcepto" value="${(g.concepto||'').replace(/"/g,'&quot;')}">
+    <label>Categoría</label><select id="egCat">${CAT_GASTO.map(c=>`<option ${g.categoria===c?'selected':''}>${c}</option>`).join("")}</select>
+    <label>Método de pago</label><select id="egMetodo">${["Transferencia","Efectivo","Tarjeta"].map(m=>`<option ${g.metodo===m?'selected':''}>${m}</option>`).join("")}</select>
+    <label>Monto ($)</label><input type="number" id="egMonto" value="${g.monto||0}">
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-primary" style="flex:1" onclick="__guardarEdicionGasto('${id}')">Guardar cambios</button>
+      <button class="btn btn-peligro" onclick="__borrarGastoDesdeEdicion('${id}')">Eliminar</button>
+    </div>`);
+};
+window.__guardarEdicionGasto=async(id)=>{
+  const monto=parseFloat($("egMonto").value)||0;
+  const concepto=$("egConcepto").value.trim();
+  if(!concepto){ toast("Escribe el concepto"); return; }
+  if(monto<=0){ toast("El monto debe ser mayor a 0"); return; }
+  await updateDoc(doc(db,"gastos",id),{
+    folio:$("egFolio").value.trim(), fecha:$("egFecha").value, concepto,
+    categoria:$("egCat").value, metodo:$("egMetodo").value, monto
+  });
+  cerrarModal(); toast("Gasto actualizado ✓");
+};
+window.__borrarGastoDesdeEdicion=async(id)=>{
+  if(!confirm("¿Eliminar este gasto? Esta acción no se puede deshacer.")) return;
+  await deleteDoc(doc(db,"gastos",id));
+  cerrarModal(); toast("Gasto eliminado");
+};
 
 /* =====================================================================
    PRODUCTOS (catálogo simple de referencia de precios)
