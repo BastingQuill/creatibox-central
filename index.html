@@ -184,6 +184,7 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   /* Acordeón móvil: solo fila compacta visible, resto oculto hasta expandir */
   .tabla.acordeon tr{padding:0;overflow:hidden}
   .tabla.acordeon tr td{display:none}
+  .tabla.acordeon tr td.td-full{display:none}
   .tabla.acordeon tr td.acc-head{display:flex;padding:14px;align-items:center;gap:10px;justify-content:space-between;text-align:left;border-bottom:none;cursor:pointer}
   .tabla.acordeon tr td.acc-head::before{display:none}
   .tabla.acordeon tr td.acc-head .cabecera-datos{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
@@ -194,10 +195,17 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   .tabla.acordeon tr td.acc-head .caret{color:var(--gris-claro);font-size:.9rem;transition:transform .2s;flex-shrink:0}
   .tabla.acordeon tr.expandida{background:var(--fondo)}
   .tabla.acordeon tr.expandida td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px dashed var(--linea);text-align:right;font-size:.85rem}
+  .tabla.acordeon tr.expandida td.td-full{display:block;text-align:center}
   .tabla.acordeon tr.expandida td::before{content:attr(data-label);font-size:.7rem;font-weight:700;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.03em;text-align:left;flex-shrink:0}
+  .tabla.acordeon tr.expandida td.td-full::before{display:none}
   .tabla.acordeon tr.expandida td.acc-head{background:var(--blanco);border-bottom:1px solid var(--linea)}
   .tabla.acordeon tr.expandida td.acc-head .caret{transform:rotate(90deg)}
   .tabla.acordeon tr.expandida td:last-child{border-bottom:none}
+  /* Puntito indicador de estatus junto al folio */
+  .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;flex-shrink:0;vertical-align:middle}
+  .status-dot.verde{background:var(--verde)}
+  .status-dot.naranja{background:var(--naranja)}
+  .status-dot.rojo{background:var(--rojo)}
   .modal{align-items:flex-end;padding:0}
   .modal-panel{max-width:100%;border-radius:24px 24px 0 0;max-height:92vh}
 }
@@ -805,7 +813,7 @@ function tablaPedidosProd(lista,completado){
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800">${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.cliente||'—'}</div></div>
+          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${completado?'var(--verde)':timer.color}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
           <div class="metrica"><div class="lbl">Tiempo</div><div class="val" style="color:${timer.color}">${timer.texto}</div></div>
           <div class="metrica"><div class="lbl">Anticipo</div><div class="val" style="color:${anticipo>0?'var(--azul)':'var(--gris)'}">${anticipo>0?'+'+fmt(anticipo):'$0'}</div></div>
         </div>
@@ -911,7 +919,7 @@ function renderIngEgr(){
   listaGastos.forEach(g=>{ h+=`<tr onclick="__toggleGasto(this,'${g.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800">${g.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.concepto||'—'}</div></div>
+          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot verde"></span>${g.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${g.concepto||'—'}</div></div>
           <div class="metrica"><div class="lbl">Monto</div><div class="val" style="color:var(--rojo)">−${fmt(g.monto)}</div></div>
         </div>
         <span class="caret">▸</span>
@@ -938,7 +946,7 @@ function tablaIngresos(lista){
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800">${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.cliente||'—'}</div></div>
+          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot ${falta>0.01?'naranja':'verde'}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
           <div class="metrica"><div class="lbl">Total</div><div class="val" style="color:var(--verde)">${fmt(v.total)}</div></div>
           <div class="metrica"><div class="lbl">Abonos</div><div class="val" style="color:var(--azul)">+${fmt(pag)}</div></div>
           ${falta>0.01?`<div class="metrica"><div class="lbl">Falta</div><div class="val" style="color:var(--naranja)">${fmt(falta)}</div></div>`:''}
