@@ -201,6 +201,11 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   .tabla.acordeon tr.expandida td.acc-head{background:var(--blanco);border-bottom:1px solid var(--linea)}
   .tabla.acordeon tr.expandida td.acc-head .caret{transform:rotate(90deg)}
   .tabla.acordeon tr.expandida td:last-child{border-bottom:none}
+  /* En móvil no queremos la celda desktop de Folio (ya viene en acc-head) */
+  .tabla.acordeon td.td-desk{display:none!important}
+  /* Botones de acción del acordeón: en flex row centrado, envuelven en móvil, gap parejo */
+  .tabla.acordeon td.td-acciones{display:flex!important;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;padding:12px 14px}
+  .tabla.acordeon td.td-acciones .btn{flex:0 0 auto}
   /* Puntito indicador de estatus junto al folio */
   .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;flex-shrink:0;vertical-align:middle}
   .status-dot.verde{background:var(--verde)}
@@ -213,6 +218,17 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 @media(min-width:861px){
   .tabla.acordeon td.acc-head{display:none}
   .tabla.acordeon td.td-full{display:none}
+  .tabla.acordeon td.td-acciones{display:none}
+}
+/* Barra de acciones del topbar: en desktop en línea, en móvil apilada y centrada.
+   .import-btn siempre al final gracias al order:99 */
+.acciones-topbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.acciones-topbar .import-btn{order:99}
+@media(max-width:860px){
+  .topbar-desk{flex-direction:column;align-items:stretch;gap:14px}
+  .acciones-topbar{justify-content:center;width:100%}
+  .acciones-topbar .btn{flex:1 1 auto;min-width:130px;max-width:220px}
+  .acciones-topbar .import-btn{flex:1 1 100%;max-width:100%;order:99}
 }
 </style>
 </head>
@@ -785,9 +801,9 @@ function renderPedidos(){
   const activos=pedidosActivos();
   const completados=pedidosCompletados();
   let h=`<div class="topbar-desk"><div><h1>Pedidos</h1><div class="sub">${activos.length} en producción · ${completados.length} completados</div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG1" accept=".xlsx" style="display:none"></label>
-      <button class="btn btn-primary" onclick="__nuevoPedidoManual()">＋ Nuevo pedido</button>
+    <div class="acciones-topbar">
+      <button class="btn btn-primary btn-sm" onclick="__nuevoPedidoManual()">＋ Nuevo pedido</button>
+      <label class="btn btn-ghost btn-sm import-btn" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG1" accept=".xlsx" style="display:none"></label>
     </div></div>`;
   h+=`<div class="grid g3" style="margin-bottom:20px">
     ${kpiMini("En producción","🔨",activos.length,"var(--naranja-claro)")}
@@ -805,27 +821,30 @@ function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="c
 function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
 
 function tablaPedidosProd(lista,completado){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Fecha</th><th>Tiempo</th><th>Productos</th><th>Anticipo</th><th></th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Fecha</th><th>Tiempo</th><th>Productos</th><th>Anticipo</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v);
     const anticipo=(v.pagos&&v.pagos.length)?(+v.pagos[0].monto||0):0;
     const timer=tiempoTranscurrido(v);
+    // Status dot: solo 2 colores válidos — verde si completado, naranja si en producción. Nunca rojo.
+    const statusColor = completado ? 'var(--verde)' : 'var(--naranja)';
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${completado?'var(--verde)':timer.color}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
+          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
           <div class="metrica"><div class="lbl">Tiempo</div><div class="val" style="color:${timer.color}">${timer.texto}</div></div>
           <div class="metrica"><div class="lbl">Anticipo</div><div class="val" style="color:${anticipo>0?'var(--azul)':'var(--gris)'}">${anticipo>0?'+'+fmt(anticipo):'$0'}</div></div>
         </div>
         <span class="caret">▸</span>
       </td>
+      <td data-label="Folio" class="td-desk"><div style="font-weight:700"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.78rem;color:var(--gris);padding-left:17px">${v.cliente||'—'}</div></td>
       <td data-label="Fecha">${fmtFecha(v.fecha)}</td>
       <td data-label="Tiempo transcurrido" style="color:${timer.color};font-weight:700">${timer.texto}</td>
-      <td data-label="Productos" style="text-align:right;font-size:.85rem">${v.productos||'—'}</td>
+      <td data-label="Productos" style="font-size:.85rem">${v.productos||'—'}</td>
       <td data-label="Anticipo" style="color:${anticipo>0?'var(--azul)':'var(--gris)'};font-weight:700">${anticipo>0?'+'+fmt(anticipo):'$0'}</td>
-      <td class="td-full" style="text-align:center;padding-top:10px">
-        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Detalles del Pedido</button>
-        ${completado?'<span class="pill verde" style="margin-left:8px">Terminado</span>':`<button class="btn btn-sm btn-verde" style="margin-left:8px" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Completar Pedido</button>`}
+      <td class="td-full td-acciones">
+        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Detalles</button>
+        ${completado?'<span class="pill verde">Terminado</span>':`<button class="btn btn-sm btn-verde" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Completar</button>`}
       </td>
     </tr>`;
   });
@@ -885,10 +904,10 @@ function renderIngEgr(){
   const utilidadNeta=totalCobrado-totalGastos;
 
   let h=`<div class="topbar-desk"><div><h1>Ingresos y Egresos</h1><div class="sub">Seguimiento financiero completo</div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG2" accept=".xlsx" style="display:none"></label>
+    <div class="acciones-topbar">
       <button class="btn btn-primary btn-sm" onclick="__nuevoPedidoManual()">＋ Nueva venta</button>
       <button class="btn btn-primary btn-sm" onclick="__nuevoGasto()">＋ Nuevo gasto</button>
+      <label class="btn btn-ghost btn-sm import-btn" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG2" accept=".xlsx" style="display:none"></label>
     </div></div>`;
 
   h+=`<div class="grid g4" style="margin-bottom:20px">
@@ -914,22 +933,25 @@ function renderIngEgr(){
   // ========== EGRESOS ==========
   h+=`<div class="card"><div class="sec-head"><h2>📉 Egresos</h2><span style="font-size:.82rem;color:var(--gris)">${gastos.length} registros · ${fmt(totalGastos)} en total</span></div>`;
   h+=`<div class="tabla-wrap"><table class="tabla responsive acordeon">
-    <thead><tr><th>Folio</th><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Método</th><th>Monto</th><th></th></tr></thead><tbody>`;
+    <thead><tr><th>Folio</th><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Método</th><th>Monto</th></tr></thead><tbody>`;
   if(!listaGastos.length) h+=`<tr><td class="td-full" style="color:var(--gris)">Sin gastos aún.</td></tr>`;
   listaGastos.forEach(g=>{ h+=`<tr onclick="__toggleGasto(this,'${g.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot verde"></span>${g.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${g.concepto||'—'}</div></div>
+          <div class="folio-cliente"><div style="font-weight:800">${g.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.concepto||'—'}</div></div>
           <div class="metrica"><div class="lbl">Monto</div><div class="val" style="color:var(--rojo)">−${fmt(g.monto)}</div></div>
         </div>
         <span class="caret">▸</span>
       </td>
+      <td data-label="Folio" class="td-desk"><b>${g.folio||'—'}</b></td>
       <td data-label="Fecha">${fmtFecha(g.fecha)}</td>
+      <td data-label="Concepto"><b>${g.concepto||'—'}</b></td>
       <td data-label="Categoría"><span class="pill violeta">${g.categoria||'Otro'}</span></td>
       <td data-label="Método">${g.metodo||'—'}</td>
-      <td class="td-full" style="text-align:center;padding-top:10px">
+      <td data-label="Monto" style="color:var(--rojo);font-weight:700">−${fmt(g.monto)}</td>
+      <td class="td-full td-acciones">
         <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__editarGasto('${g.id}')">Editar</button>
-        <button class="btn btn-sm btn-peligro" style="margin-left:8px" onclick="event.stopPropagation();__borrarGasto('${g.id}')">Eliminar</button>
+        <button class="btn btn-sm btn-peligro" onclick="event.stopPropagation();__borrarGasto('${g.id}')">Eliminar</button>
       </td>
     </tr>`; });
   h+=`</tbody></table></div></div>`;
@@ -939,29 +961,33 @@ function renderIngEgr(){
 }
 
 function tablaIngresos(lista){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Fecha</th><th>Total</th><th>Abonos</th><th>Faltante</th><th>Estatus</th><th></th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Fecha</th><th>Total</th><th>Abonos</th><th>Faltante</th><th>Estatus</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v), falta=faltanteDe(v);
-    const prod=(v.estadoProd||"activo")==="completado"?'<span class="pill verde">Terminado</span>':'<span class="pill naranja">En producción</span>';
+    const completado=(v.estadoProd||"activo")==="completado";
+    // El punto de estatus refleja PRODUCCIÓN (consistente con Pedidos): verde=terminado, naranja=en producción.
+    const statusColor = completado ? 'var(--verde)' : 'var(--naranja)';
+    const prod = completado ? '<span class="pill verde">Terminado</span>' : '<span class="pill naranja">En producción</span>';
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot ${falta>0.01?'naranja':'verde'}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
+          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
           <div class="metrica"><div class="lbl">Total</div><div class="val" style="color:var(--verde)">${fmt(v.total)}</div></div>
           <div class="metrica"><div class="lbl">Abonos</div><div class="val" style="color:var(--azul)">+${fmt(pag)}</div></div>
           ${falta>0.01?`<div class="metrica"><div class="lbl">Falta</div><div class="val" style="color:var(--naranja)">${fmt(falta)}</div></div>`:''}
         </div>
         <span class="caret">▸</span>
       </td>
+      <td data-label="Folio" class="td-desk"><div style="font-weight:700"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.78rem;color:var(--gris);padding-left:17px">${v.cliente||'—'}</div></td>
       <td data-label="Fecha">${fmtFecha(v.fecha)}</td>
       <td data-label="Total" style="color:var(--verde);font-weight:700">${fmt(v.total)}</td>
       <td data-label="Abonos" style="color:var(--azul);font-weight:700">+${fmt(pag)}</td>
       <td data-label="Faltante" style="color:var(--naranja);font-weight:700">${falta>0.01?fmt(falta):'—'}</td>
       <td data-label="Estatus">${prod}</td>
-      <td class="td-full" style="text-align:center;padding-top:10px">
-        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Ver detalle / abonar</button>
-        <button class="btn btn-sm btn-outline" style="margin-left:8px" onclick="event.stopPropagation();__editarPedido('${v.id}')">Editar</button>
-        <button class="btn btn-sm btn-peligro" style="margin-left:8px" onclick="event.stopPropagation();__borrarPedido('${v.id}')">Eliminar</button>
+      <td class="td-full td-acciones">
+        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Detalles / abonar</button>
+        <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();__editarPedido('${v.id}')">Editar</button>
+        <button class="btn btn-sm btn-peligro" onclick="event.stopPropagation();__borrarPedido('${v.id}')">Eliminar</button>
       </td>
     </tr>`;
   });
@@ -1190,9 +1216,9 @@ window.__borrarGastoDesdeEdicion=async(id)=>{
 function renderProductos(){
   const main=$("main");
   let h=`<div class="topbar-desk"><div><h1>Productos</h1><div class="sub">Precios que usa el cotizador · toca cualquiera para editar</div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="acciones-topbar">
       <button class="btn btn-amarillo btn-sm" onclick="__nuevoProductoCustom()">＋ Producto nuevo</button>
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar de Excel<input type="file" id="impExcel" accept=".xlsx" style="display:none"></label>
+      <label class="btn btn-ghost btn-sm import-btn" style="cursor:pointer;margin:0">⬆️ Importar de Excel<input type="file" id="impExcel" accept=".xlsx" style="display:none"></label>
     </div></div>`;
   const grupos=[
     ["🎨 Estampado Multicolor","estampado_multicolor"],
@@ -1208,8 +1234,7 @@ function renderProductos(){
     const obj=preciosDe(gid);
     h+=`<div class="card"><div class="sec-head"><h2 style="font-size:1rem">${titulo}</h2></div><table class="tabla"><tbody>`;
     Object.entries(obj).forEach(([k,v])=>{
-      const editado = preciosOverride[gid]&&preciosOverride[gid][k]!=null;
-      h+=`<tr class="click" onclick="__editarPrecio('${gid}','${k.replace(/'/g,"\\'")}')"><td>${k}${editado?' <span class="pill violeta" style="font-size:.6rem">editado</span>':''}</td><td style="text-align:right;font-weight:700">${fmt(v)} <span style="color:var(--violeta)">✎</span></td></tr>`;
+      h+=`<tr class="click" onclick="__editarPrecio('${gid}','${k.replace(/'/g,"\\'")}')"><td>${k}</td><td style="text-align:right;font-weight:700">${fmt(v)} <span style="color:var(--violeta)">✎</span></td></tr>`;
     });
     h+=`</tbody></table></div>`;
   });
