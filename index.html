@@ -171,6 +171,17 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   .botnav .b .ic{font-size:1.25rem}
   .botnav .b.activo{color:var(--violeta)}
   .fab{bottom:78px;right:16px}
+  /* KPI compactos en móvil: Pedidos usa g3 pero queremos 2 columnas como IngEgr (g4) */
+  .grid.g3.kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .kpi-grid .kpi{padding:14px}
+  .kpi-grid .kpi .ic-box{width:32px;height:32px;border-radius:9px;font-size:1rem;margin-bottom:8px}
+  .kpi-grid .kpi .label{font-size:.72rem}
+  .kpi-grid .kpi .valor{font-size:1.25rem}
+  /* IngEgr kpi también compacto */
+  .grid.g4 .kpi{padding:14px}
+  .grid.g4 .kpi .ic-box{width:32px;height:32px;border-radius:9px;font-size:1rem;margin-bottom:8px}
+  .grid.g4 .kpi .label{font-size:.72rem}
+  .grid.g4 .kpi .valor{font-size:1.25rem}
   .tabla-wrap{overflow-x:visible}
   .tabla.responsive thead{display:none}
   .tabla.responsive, .tabla.responsive tbody, .tabla.responsive tr{display:block;width:100%}
@@ -203,9 +214,10 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   .tabla.acordeon tr.expandida td:last-child{border-bottom:none}
   /* En móvil no queremos la celda desktop de Folio (ya viene en acc-head) */
   .tabla.acordeon td.td-desk{display:none!important}
-  /* Botones de acción del acordeón: en flex row centrado, envuelven en móvil, gap parejo */
-  .tabla.acordeon td.td-acciones{display:flex!important;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;padding:12px 14px}
-  .tabla.acordeon td.td-acciones .btn{flex:0 0 auto}
+  /* Botones de acción del acordeón: ocultos por default, visibles solo al expandir */
+  .tabla.acordeon td.td-acciones{display:none}
+  .tabla.acordeon tr.expandida td.td-acciones{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;padding:12px 14px}
+  .tabla.acordeon tr.expandida td.td-acciones .btn{flex:0 0 auto}
   /* Puntito indicador de estatus junto al folio */
   .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;flex-shrink:0;vertical-align:middle}
   .status-dot.verde{background:var(--verde)}
@@ -805,7 +817,7 @@ function renderPedidos(){
       <button class="btn btn-primary btn-sm" onclick="__nuevoPedidoManual()">＋ Nuevo pedido</button>
       <label class="btn btn-ghost btn-sm import-btn" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG1" accept=".xlsx" style="display:none"></label>
     </div></div>`;
-  h+=`<div class="grid g3" style="margin-bottom:20px">
+  h+=`<div class="grid g3 kpi-grid" style="margin-bottom:20px">
     ${kpiMini("En producción","🔨",activos.length,"var(--naranja-claro)")}
     ${kpiMini("Completados","✓",completados.length,"var(--verde-claro)")}
     ${kpiMini("Por cobrar","⏳",fmt(ventas.reduce((s,v)=>s+faltanteDe(v),0)),"var(--violeta-claro)")}
