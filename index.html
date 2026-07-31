@@ -183,6 +183,8 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   .grid.g4 .kpi .label{font-size:.72rem}
   .grid.g4 .kpi .valor{font-size:1.25rem}
   .tabla-wrap{overflow-x:visible}
+  .tabla td{font-size:.82rem}
+  .tabla th{font-size:.7rem}
   .tabla.responsive thead{display:none}
   .tabla.responsive, .tabla.responsive tbody, .tabla.responsive tr{display:block;width:100%}
   .tabla.responsive tr{background:var(--blanco);border:1px solid var(--linea);border-radius:14px;padding:6px 12px;margin-bottom:10px}
@@ -201,8 +203,8 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   .tabla.acordeon tr td.acc-head .cabecera-datos{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
   .tabla.acordeon tr td.acc-head .cabecera-datos .folio-cliente{flex:1;min-width:0}
   .tabla.acordeon tr td.acc-head .cabecera-datos .metrica{text-align:right;flex-shrink:0}
-  .tabla.acordeon tr td.acc-head .cabecera-datos .metrica .lbl{font-size:.65rem;font-weight:700;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.03em}
-  .tabla.acordeon tr td.acc-head .cabecera-datos .metrica .val{font-size:.95rem;font-weight:700}
+  .tabla.acordeon tr td.acc-head .cabecera-datos .metrica .lbl{font-size:.62rem;font-weight:700;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.03em}
+  .tabla.acordeon tr td.acc-head .cabecera-datos .metrica .val{font-size:.85rem;font-weight:700}
   .tabla.acordeon tr td.acc-head .caret{color:var(--gris-claro);font-size:.9rem;transition:transform .2s;flex-shrink:0}
   .tabla.acordeon tr.expandida{background:var(--fondo)}
   .tabla.acordeon tr.expandida td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px dashed var(--linea);text-align:right;font-size:.85rem}
@@ -436,12 +438,12 @@ function costoDe(grupo,item){
 let coti = null; // estado de la cotización en curso
 
 const SERVICIOS = [
-  {id:"estampado", nombre:"Estampado", emoji:"🎨", desc:"Impresión multicolor o vinil 1 color"},
+  {id:"estampado", nombre:"Estampado", emoji:"🎨", desc:"Impresión multicolor + corte + prensado"},
   {id:"bordado", nombre:"Bordado", emoji:"🧵", desc:"Nombre, logo o escudo"},
   {id:"sticker", nombre:"Stickers / Etiquetas", emoji:"🏷️", desc:"Plantillas y paquetes"},
   {id:"calcomania", nombre:"Calcomanías", emoji:"🎯", desc:"Vinil de corte por tamaño"},
   {id:"otros", nombre:"Otros productos", emoji:"🎁", desc:"Cake topper, llaveros, libretas"},
-  {id:"personalizado", nombre:"Producto Personalizado", emoji:"🆕", desc:"Tus productos creados a la medida"},
+  {id:"personalizado", nombre:"Producto especial", emoji:"🆕", desc:"Agrega un producto único con precio libre"},
 ];
 
 function iniciarCoti(){ coti = {servicio:null, opciones:{}, cant:1, extras:{}}; renderCotizar(); }
@@ -492,11 +494,10 @@ function renderStepper(){
 
 /* ---- Estampado ---- */
 function pasoEstampado(){
-  let h = `<label>Técnica</label><div class="opt-grid">
-    <button class="opt-card ${coti.opciones.tecnica==='estampado_multicolor'?'sel':''}" onclick="__cotiOpc('tecnica','estampado_multicolor')"><span class="emoji">🌈</span>Multicolor<div class="desc">Impresión + corte + prensado</div></button>
-    <button class="opt-card ${coti.opciones.tecnica==='estampado_unicolor'?'sel':''}" onclick="__cotiOpc('tecnica','estampado_unicolor')"><span class="emoji">⬛</span>1 Color<div class="desc">Vinil textil</div></button>
-  </div>`;
-  if(coti.opciones.tecnica){
+  // Auto-set multicolor (1 Color eliminado)
+  if(!coti.opciones.tecnica) coti.opciones.tecnica='estampado_multicolor';
+  let h = '';
+  {
     const prendas = Object.keys(PRECIOS[coti.opciones.tecnica]);
     h += `<label>Prenda</label><select onchange="__cotiOpc('prenda',this.value)"><option value="">Elige…</option>${prendas.map(p=>`<option ${coti.opciones.prenda===p?'selected':''}>${p}</option>`).join("")}</select>`;
   }
@@ -530,11 +531,11 @@ function pasoBordado(){
 /* ---- Sticker ---- */
 function pasoSticker(){
   let h = `<label>¿Plantilla suelta o paquete?</label><div class="opt-grid">
-    <button class="opt-card ${coti.opciones.modo==='plantilla'?'sel':''}" onclick="__cotiOpc('modo','plantilla')"><span class="emoji">🏷️</span>Plantilla suelta<div class="desc">Mínimo 2</div></button>
+    <button class="opt-card ${coti.opciones.modo==='plantilla'?'sel':''}" onclick="__cotiOpc('modo','plantilla')"><span class="emoji">🏷️</span>Plantilla suelta<div class="desc">Por unidad</div></button>
     <button class="opt-card ${coti.opciones.modo==='paquete'?'sel':''}" onclick="__cotiOpc('modo','paquete')"><span class="emoji">📦</span>Paquete<div class="desc">Básico o Escolar</div></button></div>`;
   if(coti.opciones.modo==='plantilla'){
     h += `<label>Material</label><select onchange="__cotiOpc('material',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS.sticker_plantilla).map(m=>`<option ${coti.opciones.material===m?'selected':''}>${m}</option>`).join("")}</select>`;
-    if(coti.opciones.material){ coti.cant=Math.max(2,coti.cant); h += cantidadInput("Cantidad de plantillas (mín. 2)"); }
+    if(coti.opciones.material){ h += cantidadInput("Cantidad de plantillas"); }
   } else if(coti.opciones.modo==='paquete'){
     h += `<label>Tipo de paquete</label><div class="opt-grid">
       <button class="opt-card ${coti.opciones.paquete==='paquete_basico'?'sel':''}" onclick="__cotiOpc('paquete','paquete_basico')">Básico<div class="desc">~80 etiquetas</div></button>
@@ -565,9 +566,10 @@ function pasoOtros(){
   return h;
 }
 function pasoPersonalizado(){
-  if(!productosCustom.length) return `<div style="color:var(--gris);font-size:.9rem">Aún no tienes productos personalizados. Créalos en la sección <b>Productos</b> primero (con su desglose de materia prima), y aquí podrás cotizarlos.</div>`;
-  let h=`<label>Producto</label><select onchange="__cotiOpc('productoId',this.value)"><option value="">Elige…</option>${productosCustom.map(p=>`<option value="${p.id}" ${coti.opciones.productoId===p.id?'selected':''}>${p.nombre} — ${fmt(p.precioVenta)}</option>`).join("")}</select>`;
-  if(coti.opciones.productoId) h += cantidadInput();
+  let h=`<label>Nombre del producto</label><input id="peNombre" placeholder="Ej. Delantal personalizado" value="${coti.opciones.peNombre||''}" onchange="__cotiOpc('peNombre',this.value)">
+    <label>Detalles adicionales (opcional)</label><textarea id="peDetalles" rows="2" placeholder="Descripción, tallas, colores…" onchange="__cotiOpc('peDetalles',this.value)">${coti.opciones.peDetalles||''}</textarea>
+    <label>Precio del producto ($)</label><input type="number" id="pePrecio" placeholder="0" value="${coti.opciones.pePrecio||''}" onchange="__cotiOpc('pePrecio',this.value)">`;
+  if(coti.opciones.peNombre && coti.opciones.pePrecio) h += cantidadInput();
   return h;
 }
 function cantidadInput(label="Cantidad"){
@@ -587,7 +589,7 @@ function calcularCoti(){
   if(coti.servicio==="estampado"){
     if(!o.tecnica||!o.prenda) return null;
     base = P(o.tecnica,o.prenda);
-    etiqueta = `${o.prenda} — ${o.tecnica==='estampado_multicolor'?'Multicolor':'1 Color'}`;
+    etiqueta = `${o.prenda} — Estampado`;
     var _c={grupo:o.tecnica,item:o.prenda};
     if(o.numEst==='2'){ base += 32; extras.push(["2do estampado (+material)",32]); }
     desc = descMayoreoPrenda(c);
@@ -605,7 +607,7 @@ function calcularCoti(){
     }
     if(o.tipo==='logo' && coti.extras.extra==='si'){ base += PRECIOS.bordadoExtra; extras.push(["Bordado extra (>10×10cm)",PRECIOS.bordadoExtra]); }
   } else if(coti.servicio==="sticker"){
-    if(o.modo==='plantilla'){ if(!o.material) return null; base=P('sticker_plantilla',o.material); etiqueta=`Plantilla — ${o.material}`; notas.push("Mínimo 2 plantillas"); var _c={grupo:'sticker_plantilla',item:o.material}; }
+    if(o.modo==='plantilla'){ if(!o.material) return null; base=P('sticker_plantilla',o.material); etiqueta=`Plantilla — ${o.material}`; var _c={grupo:'sticker_plantilla',item:o.material}; }
     else if(o.modo==='paquete'){ if(!o.paquete||!o.material) return null; base=P(o.paquete,o.material); etiqueta=`Paquete ${o.paquete==='paquete_basico'?'Básico':'Escolar'} — ${o.material}`; var _c={grupo:o.paquete,item:o.material}; }
     else return null;
   } else if(coti.servicio==="calcomania"){
@@ -618,10 +620,11 @@ function calcularCoti(){
   } else if(coti.servicio==="otros"){
     if(!o.producto) return null; base=P("otros",o.producto); etiqueta=o.producto; var _c={grupo:'otros',item:o.producto};
   } else if(coti.servicio==="personalizado"){
-    if(!o.productoId) return null;
-    const pc=productosCustom.find(x=>x.id===o.productoId); if(!pc) return null;
-    base=pc.precioVenta; etiqueta=pc.nombre; var _c={custom:true,producto:pc};
-    if(pc.notas) notas.push(pc.notas);
+    if(!o.peNombre || !o.pePrecio) return null;
+    base=parseFloat(o.pePrecio)||0; if(base<=0) return null;
+    etiqueta=o.peNombre;
+    if(o.peDetalles) notas.push(o.peDetalles);
+    var _c=null;
   }
   if(base==null) return null;
   const subtotal = base*c;
@@ -833,25 +836,28 @@ function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="c
 function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
 
 function tablaPedidosProd(lista,completado){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Fecha</th><th>Tiempo</th><th>Productos</th><th>Anticipo</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Tiempo</th><th>Productos</th><th>Anticipo</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v);
     const anticipo=(v.pagos&&v.pagos.length)?(+v.pagos[0].monto||0):0;
     const timer=tiempoTranscurrido(v);
     // Status dot: solo 2 colores válidos — verde si completado, naranja si en producción. Nunca rojo.
     const statusColor = completado ? 'var(--verde)' : 'var(--naranja)';
+    // Tiempo: negro si completado, color dinámico si activo
+    const timerColor = completado ? 'var(--tinta)' : timer.color;
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
-          <div class="metrica"><div class="lbl">Tiempo</div><div class="val" style="color:${timer.color}">${timer.texto}</div></div>
+          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
+          <div class="metrica"><div class="lbl">Tiempo</div><div class="val" style="color:${timerColor}">${timer.texto}</div></div>
           <div class="metrica"><div class="lbl">Anticipo</div><div class="val" style="color:${anticipo>0?'var(--azul)':'var(--gris)'}">${anticipo>0?'+'+fmt(anticipo):'$0'}</div></div>
         </div>
         <span class="caret">▸</span>
       </td>
-      <td data-label="Folio" class="td-desk"><div style="font-weight:700"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.78rem;color:var(--gris);padding-left:17px">${v.cliente||'—'}</div></td>
+      <td data-label="Folio" class="td-desk"><div style="font-weight:700"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div></td>
+      <td data-label="Cliente" class="td-desk" style="font-weight:700">${v.cliente||'—'}</td>
       <td data-label="Fecha">${fmtFecha(v.fecha)}</td>
-      <td data-label="Tiempo transcurrido" style="color:${timer.color};font-weight:700">${timer.texto}</td>
+      <td data-label="Tiempo transcurrido" style="color:${timerColor};font-weight:700">${timer.texto}</td>
       <td data-label="Productos" style="font-size:.85rem">${v.productos||'—'}</td>
       <td data-label="Anticipo" style="color:${anticipo>0?'var(--azul)':'var(--gris)'};font-weight:700">${anticipo>0?'+'+fmt(anticipo):'$0'}</td>
       <td class="td-full td-acciones">
@@ -973,7 +979,7 @@ function renderIngEgr(){
 }
 
 function tablaIngresos(lista){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Fecha</th><th>Total</th><th>Abonos</th><th>Faltante</th><th>Estatus</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Abonos</th><th>Faltante</th><th>Estatus</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v), falta=faltanteDe(v);
     const completado=(v.estadoProd||"activo")==="completado";
@@ -983,14 +989,15 @@ function tablaIngresos(lista){
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
+          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
           <div class="metrica"><div class="lbl">Total</div><div class="val" style="color:var(--verde)">${fmt(v.total)}</div></div>
           <div class="metrica"><div class="lbl">Abonos</div><div class="val" style="color:var(--azul)">+${fmt(pag)}</div></div>
           ${falta>0.01?`<div class="metrica"><div class="lbl">Falta</div><div class="val" style="color:var(--naranja)">${fmt(falta)}</div></div>`:''}
         </div>
         <span class="caret">▸</span>
       </td>
-      <td data-label="Folio" class="td-desk"><div style="font-weight:700"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.78rem;color:var(--gris);padding-left:17px">${v.cliente||'—'}</div></td>
+      <td data-label="Folio" class="td-desk"><div style="font-weight:700"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div></td>
+      <td data-label="Cliente" class="td-desk" style="font-weight:700">${v.cliente||'—'}</td>
       <td data-label="Fecha">${fmtFecha(v.fecha)}</td>
       <td data-label="Total" style="color:var(--verde);font-weight:700">${fmt(v.total)}</td>
       <td data-label="Abonos" style="color:var(--azul);font-weight:700">+${fmt(pag)}</td>
@@ -1051,7 +1058,7 @@ window.__verPedido=(id)=>{
   const v=ventas.find(x=>x.id===id); if(!v) return;
   const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
   const completado=(v.estadoProd||"activo")==="completado";
-  const pagosHtml=(v.pagos||[]).length?v.pagos.map((p,i)=>`<div class="quote-line"><span>${fmtFecha(p.fecha)} · ${p.metodo}</span><span>${fmt(p.monto)} <button onclick="__borrarAbono('${id}',${i})" style="color:var(--rojo);margin-left:8px">✕</button></span></div>`).join(""):'<div style="color:var(--gris);font-size:.85rem;padding:6px 0">Sin abonos aún</div>';
+  const pagosHtml=(v.pagos||[]).length?v.pagos.map((p,i)=>`<div class="quote-line"><span>${fmtFecha(p.fecha)} · ${p.metodo}</span><span style="color:var(--verde);font-weight:700">${fmt(p.monto)} <button onclick="__borrarAbono('${id}',${i})" style="color:var(--rojo);margin-left:8px">✕</button></span></div>`).join(""):'<div style="color:var(--gris);font-size:.85rem;padding:6px 0">Sin abonos aún</div>';
   const itemsHtml=(v.items||[]).length?`<div style="background:var(--fondo);border-radius:12px;padding:12px;margin:8px 0"><div style="font-weight:700;font-size:.85rem;margin-bottom:6px">Productos del pedido</div>${v.items.map(it=>`<div style="font-size:.85rem;padding:4px 0;display:flex;justify-content:space-between"><span>${it.cant}× ${it.etiqueta}</span><span><b>${fmt(it.total)}</b></span></div>`).join('')}</div>`:'';
   abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
     <h2>${v.folio||'Pedido'}</h2><div class="msub">${v.cliente} · ${fmtFecha(v.fecha)}</div>
@@ -1070,7 +1077,7 @@ window.__verPedido=(id)=>{
       <label style="margin-top:0">Registrar nuevo abono</label>
       <div class="grid g2"><input type="number" id="nvAbono" placeholder="Monto ($)"><select id="nvMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
       <label style="margin-top:10px">Fecha del abono</label><input type="date" id="nvFecha" value="${hoy()}">
-      <button class="btn btn-verde btn-block" style="margin-top:10px" onclick="__agregarAbono('${id}')">＋ Agregar abono</button></div>`:'<div class="pill verde" style="margin-top:14px">✓ Pedido saldado completamente</div>'}
+      <button class="btn btn-verde btn-block" style="margin-top:10px" onclick="__agregarAbono('${id}')">💚 Agregar abono</button></div>`:'<div class="pill verde" style="margin-top:14px">✓ Pedido saldado completamente</div>'}
     <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
       ${!completado?`<button class="btn btn-verde" style="flex:1;min-width:120px" onclick="__marcarCompletado('${id}');__cerrar()">✓ Marcar terminado</button>`:''}
       <button class="btn btn-outline" style="flex:1;min-width:100px" onclick="__editarPedido('${id}')">Editar</button>
