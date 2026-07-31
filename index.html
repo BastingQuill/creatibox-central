@@ -276,6 +276,7 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
     <button class="nav-item" data-vista="ingegr"><span class="ic">💰</span> Ingresos y Egresos</button>
     <button class="nav-item" data-vista="productos"><span class="ic">📦</span> Productos</button>
     <button class="nav-item" data-vista="materia"><span class="ic">🧵</span> Materia Prima</button>
+    <button class="nav-item" data-vista="vip"><span class="ic">⭐</span> VIP</button>
     <div class="abajo">
       <button class="nav-item" id="btnExcel"><span class="ic">⬇️</span> Exportar Excel</button>
       <button class="nav-item" id="btnSalir"><span class="ic">⏻</span> Salir</button>
@@ -688,7 +689,7 @@ function renderResultadoCoti(r){
 }
 
 // Handlers globales del cotizador
-window.__reiniciarCoti=()=>{ coti=null; iniciarCoti(); };
+window.__reiniciarCoti=()=>{ coti=null; _pedidoDestinoId=null; iniciarCoti(); };
 window.__cotiServicio=(s)=>{ coti.servicio=s; coti.opciones={}; coti.extras={}; coti.cant=1; renderCotizar(); };
 window.__cotiOpc=(k,v)=>{ coti.opciones[k]=v; if(k==='tecnica'||k==='modo'||k==='paquete') { if(k==='modo'){coti.opciones.material=null;coti.opciones.paquete=null;} } renderCotizar(); };
 window.__cotiExtra=(k,v)=>{ coti.extras[k]=v; renderCotizar(); };
@@ -705,6 +706,7 @@ window.__agregarAlCarrito=()=>{
 };
 
 window.__eliminarDelCarrito=(i)=>{ carrito.splice(i,1); renderCotizar(); };
+window.__cancelarDestinoYRender=()=>{ _pedidoDestinoId=null; renderCotizar(); };
 
 window.__ajustarMayoreoItem=(i,pct)=>{
   const item=carrito[i]; const p=+pct;
@@ -724,8 +726,21 @@ function totalCarrito(){ return carrito.reduce((s,x)=>s+(+x.total||0),0); }
 function totalPiezasCarrito(){ return carrito.reduce((s,x)=>s+(+x.cant||0),0); }
 
 function renderCarrito(){
-  if(!carrito.length) return "";
-  let h = `<div class="card" style="margin-top:20px"><div class="sec-head"><h2>🛒 Carrito de cotización</h2><span class="pill violeta">${carrito.length} producto${carrito.length>1?'s':''} · ${totalPiezasCarrito()} pzas</span></div>`;
+  if(!carrito.length && !_pedidoDestinoId) return "";
+  let h = "";
+  // Banner when adding to existing pedido
+  if(_pedidoDestinoId){
+    const destV=ventas.find(x=>x.id===_pedidoDestinoId);
+    if(destV){
+      h += `<div style="background:var(--naranja-claro);border-radius:var(--radius);padding:14px 18px;margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div><div style="font-size:.78rem;font-weight:700;color:var(--naranja);text-transform:uppercase;letter-spacing:.03em">Agregando a pedido existente</div>
+        <div style="font-weight:800;margin-top:2px">${destV.folio} — ${destV.cliente}</div></div>
+        <button class="btn btn-sm btn-ghost" onclick="window.__cancelarDestinoYRender()">✕ Cancelar</button>
+      </div>`;
+    }
+  }
+  if(!carrito.length) return h;
+  h += `<div class="card" style="margin-top:20px"><div class="sec-head"><h2>🛒 Carrito de cotización</h2><span class="pill violeta">${carrito.length} producto${carrito.length>1?'s':''} · ${totalPiezasCarrito()} pzas</span></div>`;
   carrito.forEach((x,i)=>{
     const c = x._costeo ? costoDe(x._costeo.grupo,x._costeo.item) : null;
     const util = c ? (x.base - c.total) * x.cant : null;
@@ -748,7 +763,9 @@ function renderCarrito(){
   });
   h += `<div style="display:flex;justify-content:space-between;padding:14px 0 4px;font-weight:800;font-size:1.2rem">
     <span>Total cotización</span><span>${fmt(totalCarrito())}</span></div>
-    <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="__terminarCotizacion()">Terminar cotización →</button></div>`;
+    ${_pedidoDestinoId?`<button class="btn btn-amarillo btn-block" style="margin-top:12px" onclick="__confirmarAgregarAPedido('${_pedidoDestinoId}')">📂 Agregar a ${(ventas.find(x=>x.id===_pedidoDestinoId)||{}).folio||'pedido'}</button>`
+    :`<button class="btn btn-primary btn-block" style="margin-top:12px" onclick="__terminarCotizacion()">Terminar cotización →</button>`}
+    </div>`;
   return h;
 }
 
@@ -778,7 +795,8 @@ window.__terminarCotizacion=()=>{
     <div style="background:var(--fondo);border-radius:14px;padding:14px;margin:14px 0;font-size:.85rem;white-space:pre-line">${productos}</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
       <button class="btn btn-wa" onclick="__enviarWhatsCliente()">📲 Enviar cotización por WhatsApp</button>
-      <button class="btn btn-primary" onclick="__confirmarPedidoDesdeCarrito()">✓ Confirmar pedido</button>
+      <button class="btn btn-primary" onclick="__confirmarPedidoDesdeCarrito()">✓ Confirmar pedido nuevo</button>
+      <button class="btn btn-amarillo" onclick="__agregarAPedidoExistente()">📂 Agregar a pedido existente</button>
       <button class="btn btn-ghost" onclick="__cerrar()">Seguir editando</button>
     </div>`);
 };
@@ -802,6 +820,47 @@ window.__confirmarPedidoDesdeCarrito=()=>{
     history.back();
   } else {
     setTimeout(abrirDespues,0);
+  }
+};
+
+/* ---- Agregar productos del carrito a un pedido existente ---- */
+let _pedidoDestinoId=null; // para el flujo "agregar productos desde detalle del pedido"
+
+window.__agregarAPedidoExistente=()=>{
+  const activos=[...ventas].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  if(!activos.length){ toast("No hay pedidos existentes"); return; }
+  let listHtml=activos.map(v=>`<button class="btn btn-ghost btn-block" style="justify-content:flex-start;gap:12px" onclick="__confirmarAgregarAPedido('${v.id}')">
+    <span style="font-weight:800">${v.folio||'—'}</span>
+    <span style="flex:1;text-align:left;font-weight:600">${v.cliente||'—'}</span>
+    <span style="color:var(--gris);font-size:.82rem">${fmt(v.total)}</span>
+  </button>`).join("");
+  abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
+    <h2>Agregar a pedido existente</h2><div class="msub">Selecciona el pedido al que quieres agregar ${carrito.length} producto${carrito.length>1?'s':''}</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:14px;max-height:50vh;overflow-y:auto">${listHtml}</div>`);
+};
+
+window.__confirmarAgregarAPedido=async(id)=>{
+  const v=ventas.find(x=>x.id===id); if(!v) return;
+  const nuevosItems=carrito.map(x=>({etiqueta:x.etiqueta,cant:x.cant,base:x.base,desc:x.desc||0,total:x.total,notas:(x.notas||[]).join(' · ')}));
+  const itemsExistentes=v.items||[];
+  const todosItems=[...itemsExistentes,...nuevosItems];
+  const nuevoTotal=(+v.total||0)+totalCarrito();
+  const productosTexto=[v.productos||'',carrito.map(x=>`${x.cant}× ${x.etiqueta}`).join(' · ')].filter(Boolean).join(' · ');
+  await updateDoc(doc(db,"ventas",id),{items:todosItems,total:nuevoTotal,productos:productosTexto});
+  carrito=[]; cerrarModal(); toast(`Productos agregados a ${v.folio} ✓`);
+  _pedidoDestinoId=null;
+};
+
+/* ---- Agregar productos desde detalle del pedido (va al cotizador con destino prefijado) ---- */
+window.__agregarProductosAPedido=(id)=>{
+  _pedidoDestinoId=id;
+  cerrarModal(true);
+  if(history.state && history.state.modal){
+    const onPop=()=>{ window.removeEventListener("popstate",onPop); irVista("cotizar"); };
+    window.addEventListener("popstate",onPop);
+    history.back();
+  } else {
+    setTimeout(()=>irVista("cotizar"),0);
   }
 };
 
@@ -1080,6 +1139,7 @@ window.__verPedido=(id)=>{
       <button class="btn btn-verde btn-block" style="margin-top:10px" onclick="__agregarAbono('${id}')">💚 Agregar abono</button></div>`:'<div class="pill verde" style="margin-top:14px">✓ Pedido saldado completamente</div>'}
     <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
       ${!completado?`<button class="btn btn-verde" style="flex:1;min-width:120px" onclick="__marcarCompletado('${id}');__cerrar()">✓ Marcar terminado</button>`:''}
+      <button class="btn btn-amarillo" style="flex:1;min-width:120px" onclick="__agregarProductosAPedido('${id}')">＋ Agregar productos</button>
       <button class="btn btn-outline" style="flex:1;min-width:100px" onclick="__editarPedido('${id}')">Editar</button>
       <button class="btn btn-peligro" onclick="__borrarPedido('${id}')">Eliminar</button></div>`);
 };
@@ -1484,7 +1544,7 @@ function renderDashboard(){
 
   h+=`<div class="grid g2">
     <div class="card"><div class="sec-head"><h2>Últimas ventas</h2><span class="link" onclick="__irVista('pedidos')">Ver todos →</span></div>
-      ${ultimasVentas.length?`<table class="tabla"><tbody>${ultimasVentas.map(v=>`<tr class="click" onclick="__verPedido('${v.id}')"><td><b>${v.cliente||'—'}</b><div style="font-size:.75rem;color:var(--gris)">${v.productos||''}</div></td><td style="text-align:right"><b>${fmt(v.total)}</b><div style="font-size:.72rem">${faltanteDe(v)>0.01?`<span class="pill naranja">falta ${fmt(faltanteDe(v))}</span>`:`<span class="pill verde">saldado</span>`}</div></td></tr>`).join("")}</tbody></table>`:'<div style="color:var(--gris)">Aún no hay ventas.</div>'}
+      ${ultimasVentas.length?tablaIngresos(ultimasVentas):'<div style="color:var(--gris)">Aún no hay ventas.</div>'}
     </div>
     <div class="card"><div class="sec-head"><h2>⏳ Cuentas por cobrar</h2></div>
       ${abiertos.length?`<table class="tabla"><tbody>${abiertos.slice(0,5).map(v=>`<tr class="click" onclick="__verPedido('${v.id}')"><td><b>${v.cliente}</b><div style="font-size:.75rem;color:var(--gris)">${v.folio||''}</div></td><td style="text-align:right;color:var(--naranja);font-weight:700">${fmt(faltanteDe(v))}</td></tr>`).join("")}</tbody></table>`:'<div style="color:var(--gris)">Todo saldado 🎉</div>'}
@@ -1642,15 +1702,64 @@ function exportarExcel(){
 }
 
 /* =====================================================================
+   VIP — Referidos
+   ===================================================================== */
+function renderVIP(){
+  const main=$("main");
+  // Aggregate referidos from ventas
+  const refMap={};
+  ventas.forEach(v=>{
+    const ref=(v.referido||"").trim();
+    if(!ref) return;
+    if(!refMap[ref]) refMap[ref]={nombre:ref,count:0,total:0,pedidos:[]};
+    refMap[ref].count++;
+    refMap[ref].total+=(+v.total||0);
+    refMap[ref].pedidos.push(v);
+  });
+  const ranking=Object.values(refMap).sort((a,b)=>b.count-a.count||b.total-a.total);
+  const totalReferidos=ranking.reduce((s,r)=>s+r.count,0);
+  const totalIngresosRef=ranking.reduce((s,r)=>s+r.total,0);
+
+  let h=`<div class="topbar-desk"><div><h1>⭐ VIP — Referidos</h1><div class="sub">${ranking.length} personas te han referido clientes</div></div></div>`;
+
+  h+=`<div class="grid g3 kpi-grid" style="margin-bottom:20px">
+    ${kpiMini("Referidores","👥",ranking.length,"var(--violeta-claro)")}
+    ${kpiMini("Referidos totales","📋",totalReferidos,"var(--naranja-claro)")}
+    ${kpiMini("Ventas por referidos","💵",fmt(totalIngresosRef),"var(--verde-claro)")}
+  </div>`;
+
+  h+=`<div class="card"><div class="sec-head"><h2>🏆 Ranking de referidores</h2></div>`;
+  if(!ranking.length){
+    h+=`<div style="color:var(--gris);padding:10px">Aún no hay referidos registrados. Agrega el campo "Referido por" al crear un pedido.</div>`;
+  } else {
+    h+=`<div class="tabla-wrap"><table class="tabla responsive"><thead><tr><th>#</th><th>Nombre</th><th>Referidos</th><th>Ventas generadas</th><th>Último referido</th></tr></thead><tbody>`;
+    ranking.forEach((r,i)=>{
+      const ultimo=r.pedidos.sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
+      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+      h+=`<tr>
+        <td data-label="#" style="font-weight:800;font-size:1.1rem;text-align:center">${medal}</td>
+        <td data-label="Nombre" style="font-weight:700">${r.nombre}</td>
+        <td data-label="Referidos" style="font-weight:700;color:var(--violeta)">${r.count} pedido${r.count>1?'s':''}</td>
+        <td data-label="Ventas generadas" style="font-weight:700;color:var(--verde)">${fmt(r.total)}</td>
+        <td data-label="Último referido" style="color:var(--gris)">${fmtFecha(ultimo?.fecha)}</td>
+      </tr>`;
+    });
+    h+=`</tbody></table></div>`;
+  }
+  h+=`</div>`;
+  main.innerHTML=h;
+}
+
+/* =====================================================================
    NAVEGACIÓN + ARRANQUE
    ===================================================================== */
-const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,pedidos:renderPedidos,ingegr:renderIngEgr,productos:renderProductos,materia:renderMateria};
+const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,pedidos:renderPedidos,ingegr:renderIngEgr,productos:renderProductos,materia:renderMateria,vip:renderVIP};
 function irVista(v,_desdeHistorial){
   vistaActual=v;
   Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={};
   document.querySelectorAll(".nav-item[data-vista]").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
   document.querySelectorAll(".botnav .b[data-vista]").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
-  const esMas=["productos","materia"].includes(v);
+  const esMas=["productos","materia","vip"].includes(v);
   const btnMas=$("btnMas"); if(btnMas) btnMas.classList.toggle("activo",esMas);
   (VISTAS[v]||renderDashboard)();
   window.scrollTo(0,0);
@@ -1668,6 +1777,7 @@ $("btnMas").onclick=()=>{
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('productos')">📦 Productos</button>
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('materia')">🧵 Materia Prima</button>
+      <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('vip')">⭐ VIP — Referidos</button>
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__cerrarYAccion(exportarExcel)">⬇️ Exportar Excel</button>
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start;color:var(--rojo)" onclick="__cerrarYAccion(()=>{if(confirm('¿Cerrar sesión?'))signOut(auth);})">⏻ Salir</button>
     </div>`);
