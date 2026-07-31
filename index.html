@@ -1136,10 +1136,10 @@ window.__verPedido=(id)=>{
       <label style="margin-top:0">Registrar nuevo abono</label>
       <div class="grid g2"><input type="number" id="nvAbono" placeholder="Monto ($)"><select id="nvMetodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
       <label style="margin-top:10px">Fecha del abono</label><input type="date" id="nvFecha" value="${hoy()}">
-      <button class="btn btn-verde btn-block" style="margin-top:10px" onclick="__agregarAbono('${id}')">💚 Agregar abono</button></div>`:'<div class="pill verde" style="margin-top:14px">✓ Pedido saldado completamente</div>'}
+      <button class="btn btn-verde btn-block" style="margin-top:10px" onclick="__agregarAbono('${id}')">+ Agregar abono</button></div>`:'<div class="pill verde" style="margin-top:14px">✓ Pedido saldado completamente</div>'}
     <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
-      ${!completado?`<button class="btn btn-verde" style="flex:1;min-width:120px" onclick="__marcarCompletado('${id}');__cerrar()">✓ Marcar terminado</button>`:''}
-      <button class="btn btn-amarillo" style="flex:1;min-width:120px" onclick="__agregarProductosAPedido('${id}')">＋ Agregar productos</button>
+      ${!completado?`<button class="btn btn-verde" style="flex:1;min-width:120px" onclick="__marcarCompletado('${id}');__cerrar()">Marcar terminado</button>`:''}
+      <button class="btn btn-amarillo" style="flex:1;min-width:120px" onclick="__agregarProductosAPedido('${id}')">Agregar productos</button>
       <button class="btn btn-outline" style="flex:1;min-width:100px" onclick="__editarPedido('${id}')">Editar</button>
       <button class="btn btn-peligro" onclick="__borrarPedido('${id}')">Eliminar</button></div>`);
 };
