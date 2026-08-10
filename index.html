@@ -770,7 +770,7 @@ function renderCarrito(){
 }
 
 function textoCotiCarritoParaCliente(){
-  let l=[`*CreatiBox* 🧵`,`Cotización de tu pedido:`,``];
+  let l=[`*CreatiBox*`,`Cotización de tu pedido:`,``];
   carrito.forEach((x,i)=>{
     l.push(`*${i+1}. ${x.etiqueta}*`);
     l.push(`   ${x.cant} × ${fmt(x.base)} c/u = ${fmt(x.subtotal)}`);
@@ -783,7 +783,8 @@ function textoCotiCarritoParaCliente(){
   l.push(`━━━━━━━━━━━━━━`);
   l.push(`*Total: ${fmt(totalCarrito())} MXN*`);
   l.push('');
-  l.push('¿Confirmas para arrancar tu pedido? ✨');
+  l.push(`*Anticipo 50%: ${fmt(totalCarrito()/2)}*`);
+  l.push('¿Confirmas para arrancar tu pedido? ☺️');
   return l.join('\n');
 }
 
