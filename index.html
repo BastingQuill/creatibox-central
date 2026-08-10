@@ -27,6 +27,7 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:16px}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--fondo);color:var(--tinta);min-height:100vh;overflow-x:hidden}
+@media(max-width:860px){ html{font-size:13.6px} }
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input,select,textarea{font-family:inherit;font-size:1rem;width:100%;padding:13px 15px;border:1.5px solid var(--linea);border-radius:var(--radius-sm);background:var(--blanco);color:var(--tinta);transition:border-color .15s}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--violeta)}
@@ -159,6 +160,32 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .progress .fill{height:100%;background:var(--verde);border-radius:999px;transition:width .3s}
 
 /* Responsivo */
+/* Chips: reemplazo visual para <select> — todas las opciones a la vista */
+.chip-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;border:1.5px solid var(--linea);background:var(--blanco);color:var(--tinta);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .12s;line-height:1.15}
+.chip:hover{border-color:var(--violeta-claro);background:var(--violeta-claro)}
+.chip.sel{background:var(--violeta);color:#fff;border-color:var(--violeta)}
+.chip .precio{opacity:.7;font-size:.78rem;font-weight:500}
+.chip.sel .precio{opacity:.9}
+
+/* Affordance para filas clicables — desktop hover + móvil active */
+.tabla.acordeon tr{transition:background .12s, box-shadow .12s}
+.tabla.acordeon tr:hover td.acc-head{background:var(--fondo)}
+.tabla.acordeon tr:active td.acc-head{background:var(--violeta-claro)}
+@media(min-width:861px){
+  .tabla tr.click{transition:background .12s}
+  .tabla tr.click:hover td{background:var(--fondo)!important;cursor:pointer}
+  .tabla.acordeon tr{cursor:pointer;border-left:3px solid transparent}
+  .tabla.acordeon tr:hover{border-left-color:var(--violeta);background:var(--fondo)}
+}
+
+/* Pie de página con acciones secundarias (Importar Excel al fondo) */
+.pie-acciones{margin-top:30px;padding:20px 0;border-top:1px solid var(--linea);display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+
+/* Productos preview en móvil dentro de la tarjeta de Pedidos */
+.acc-productos{display:none;font-size:.78rem;color:var(--gris);font-weight:500;margin-top:6px;padding-left:17px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:861px){.acc-productos{display:none!important}}
+
 @media(max-width:860px){
   .sidebar{display:none}
   .main{margin-left:0;padding:16px 16px 90px;max-width:100%}
@@ -321,7 +348,7 @@ const fmtFecha = d => { if(!d) return "—"; const x=new Date(d+"T00:00:00"); re
 const PRECIOS = {
   estampado_multicolor: { // precio competitivo
     "Playera Prime Adulto":170, "Playera Niño":135, "Sudadera":400, "Tote Bag":120,
-    "Costal de Yute":50, "Polo":230, "Deportiva 100% Poliéster":245
+    "Costal de Yute":50, "Polo":230, "Deportiva 100% Poliéster":245, "Solo estampado":120
   },
   estampado_unicolor: {
     "Playera Prime Adulto":140, "Playera Niño":120, "Sudadera":380, "Tote Bag":100,
@@ -500,20 +527,19 @@ function pasoEstampado(){
   let h = '';
   {
     const prendas = Object.keys(PRECIOS[coti.opciones.tecnica]);
-    h += `<label>Prenda</label><select onchange="__cotiOpc('prenda',this.value)"><option value="">Elige…</option>${prendas.map(p=>`<option ${coti.opciones.prenda===p?'selected':''}>${p}</option>`).join("")}</select>`;
+    h += `<label>Prenda</label>${chipsHTML(prendas, coti.opciones.prenda, 'prenda', PRECIOS[coti.opciones.tecnica])}`;
   }
   if(coti.opciones.prenda){
     h += cantidadInput();
-    h += `<label>Número de estampados por prenda</label><select onchange="__cotiOpc('numEst',this.value)">
-      <option value="1" ${coti.opciones.numEst==='1'?'selected':''}>1 estampado</option>
-      <option value="2" ${coti.opciones.numEst==='2'?'selected':''}>2 estampados (frente + espalda/manga)</option></select>
+    h += `<label>Número de estampados por prenda</label>${chipsHTML(['1','2'], String(coti.opciones.numEst||'1'), 'numEst', null, {'1':'1 estampado','2':'2 estampados'})}
       <div style="font-size:.75rem;color:var(--gris);margin-top:6px">Cada estampado extra suma una hoja de material (~$32).</div>`;
   }
   return h;
 }
 /* ---- Bordado ---- */
 function pasoBordado(){
-  let h = `<label>Prenda</label><select onchange="__cotiOpc('prenda',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS.bordado).map(p=>`<option ${coti.opciones.prenda===p?'selected':''}>${p}</option>`).join("")}</select>`;
+  const prendas = Object.keys(PRECIOS.bordado);
+  let h = `<label>Prenda</label>${chipsHTML(prendas, coti.opciones.prenda, 'prenda', PRECIOS.bordado)}`;
   if(coti.opciones.prenda){
     h += cantidadInput();
     h += `<label>Tipo de bordado</label><div class="opt-grid">
@@ -522,8 +548,8 @@ function pasoBordado(){
     </div>`;
     if(coti.opciones.tipo==='logo'){
       h += `<div class="grid g2" style="margin-top:14px">
-        <div><label style="margin-top:0">¿Cobrar ponchado? (${fmt(PRECIOS.ponchado)})</label><select onchange="__cotiExtra('ponchado',this.value)"><option value="no" ${coti.extras.ponchado!=='si'?'selected':''}>No</option><option value="si" ${coti.extras.ponchado==='si'?'selected':''}>Sí, único por diseño</option></select></div>
-        <div><label style="margin-top:0">¿Excede 10×10cm? (+${fmt(PRECIOS.bordadoExtra)})</label><select onchange="__cotiExtra('extra',this.value)"><option value="no" ${coti.extras.extra!=='si'?'selected':''}>No</option><option value="si" ${coti.extras.extra==='si'?'selected':''}>Sí</option></select></div>
+        <div><label style="margin-top:0">¿Cobrar ponchado? (${fmt(PRECIOS.ponchado)})</label>${chipsHTML(['no','si'], coti.extras.ponchado||'no', '__extra_ponchado', null, {'no':'No','si':'Sí, único por diseño'})}</div>
+        <div><label style="margin-top:0">¿Excede 10×10cm? (+${fmt(PRECIOS.bordadoExtra)})</label>${chipsHTML(['no','si'], coti.extras.extra||'no', '__extra_extra', null, {'no':'No','si':'Sí'})}</div>
       </div>`;
     }
   }
@@ -535,14 +561,16 @@ function pasoSticker(){
     <button class="opt-card ${coti.opciones.modo==='plantilla'?'sel':''}" onclick="__cotiOpc('modo','plantilla')"><span class="emoji">🏷️</span>Plantilla suelta<div class="desc">Por unidad</div></button>
     <button class="opt-card ${coti.opciones.modo==='paquete'?'sel':''}" onclick="__cotiOpc('modo','paquete')"><span class="emoji">📦</span>Paquete<div class="desc">Básico o Escolar</div></button></div>`;
   if(coti.opciones.modo==='plantilla'){
-    h += `<label>Material</label><select onchange="__cotiOpc('material',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS.sticker_plantilla).map(m=>`<option ${coti.opciones.material===m?'selected':''}>${m}</option>`).join("")}</select>`;
+    const mats=Object.keys(PRECIOS.sticker_plantilla);
+    h += `<label>Material</label>${chipsHTML(mats, coti.opciones.material, 'material', PRECIOS.sticker_plantilla)}`;
     if(coti.opciones.material){ h += cantidadInput("Cantidad de plantillas"); }
   } else if(coti.opciones.modo==='paquete'){
     h += `<label>Tipo de paquete</label><div class="opt-grid">
       <button class="opt-card ${coti.opciones.paquete==='paquete_basico'?'sel':''}" onclick="__cotiOpc('paquete','paquete_basico')">Básico<div class="desc">~80 etiquetas</div></button>
       <button class="opt-card ${coti.opciones.paquete==='paquete_escolar'?'sel':''}" onclick="__cotiOpc('paquete','paquete_escolar')">Escolar<div class="desc">~130 etiquetas</div></button></div>`;
     if(coti.opciones.paquete){
-      h += `<label>Material</label><select onchange="__cotiOpc('material',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS[coti.opciones.paquete]).map(m=>`<option ${coti.opciones.material===m?'selected':''}>${m}</option>`).join("")}</select>`;
+      const mats=Object.keys(PRECIOS[coti.opciones.paquete]);
+      h += `<label>Material</label>${chipsHTML(mats, coti.opciones.material, 'material', PRECIOS[coti.opciones.paquete])}`;
       if(coti.opciones.material) h += cantidadInput("Cantidad de paquetes");
     }
   }
@@ -553,16 +581,19 @@ function pasoCalcomania(){
   const meds = PRECIOS.calcomania.medidas;
   if(!coti.opciones.ancho) coti.opciones.ancho = meds[0];
   if(!coti.opciones.alto) coti.opciones.alto = meds[0];
+  const labels={};
+  meds.forEach(m=>{labels[String(m)]=`${m} cm`;});
   let h = `<div class="grid g2">
-    <div><label style="margin-top:0">Ancho</label><select onchange="__cotiOpc('ancho',this.value)">${meds.map(m=>`<option ${coti.opciones.ancho==m?'selected':''}>${m}</option>`).join("")}</select></div>
-    <div><label style="margin-top:0">Alto</label><select onchange="__cotiOpc('alto',this.value)">${meds.map(m=>`<option ${coti.opciones.alto==m?'selected':''}>${m}</option>`).join("")}</select></div>
+    <div><label style="margin-top:0">Ancho</label>${chipsHTML(meds.map(String), String(coti.opciones.ancho), 'ancho', null, labels)}</div>
+    <div><label style="margin-top:0">Alto</label>${chipsHTML(meds.map(String), String(coti.opciones.alto), 'alto', null, labels)}</div>
   </div>`;
   h += cantidadInput("Cantidad de piezas");
   return h;
 }
 /* ---- Otros ---- */
 function pasoOtros(){
-  let h = `<label>Producto</label><select onchange="__cotiOpc('producto',this.value)"><option value="">Elige…</option>${Object.keys(PRECIOS.otros).map(p=>`<option ${coti.opciones.producto===p?'selected':''}>${p}</option>`).join("")}</select>`;
+  const prods=Object.keys(PRECIOS.otros);
+  let h = `<label>Producto</label>${chipsHTML(prods, coti.opciones.producto, 'producto', PRECIOS.otros)}`;
   if(coti.opciones.producto) h += cantidadInput();
   return h;
 }
@@ -572,6 +603,24 @@ function pasoPersonalizado(){
     <label>Precio del producto ($)</label><input type="number" id="pePrecio" placeholder="0" value="${coti.opciones.pePrecio||''}" onchange="__cotiOpc('pePrecio',this.value)">`;
   if(coti.opciones.peNombre && coti.opciones.pePrecio) h += cantidadInput();
   return h;
+}
+/* Chips: alternativa visual a <select> — todas las opciones visibles.
+   valores: array de strings. seleccionado: string. field: nombre de la opción del cotizador.
+   precios: objeto opcional {valor:precio} para mostrar el precio abajo del chip.
+   labels: objeto opcional {valor:etiquetaLegible} si quieres personalizar el texto. */
+function chipsHTML(valores, seleccionado, field, precios, labels){
+  return `<div class="chip-group">${valores.map(v=>{
+    const sel = String(seleccionado)===String(v) ? 'sel' : '';
+    const txt = labels && labels[v] ? labels[v] : v;
+    const precio = precios && precios[v]!=null ? `<span class="precio">${fmt(precios[v])}</span>` : '';
+    // encode value safely for onclick
+    const safe = String(v).replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    let handler;
+    if(field==='__extra_ponchado') handler=`__cotiExtra('ponchado','${safe}')`;
+    else if(field==='__extra_extra') handler=`__cotiExtra('extra','${safe}')`;
+    else handler=`__cotiOpc('${field}','${safe}')`;
+    return `<button type="button" class="chip ${sel}" onclick="${handler}">${txt}${precio}</button>`;
+  }).join("")}</div>`;
 }
 function cantidadInput(label="Cantidad"){
   return `<label>${label}</label>
@@ -875,10 +924,9 @@ function renderPedidos(){
   const main=$("main");
   const activos=pedidosActivos();
   const completados=pedidosCompletados();
-  let h=`<div class="topbar-desk"><div><h1>Pedidos</h1><div class="sub">${activos.length} en producción · ${completados.length} completados</div></div>
+  let h=`<div class="topbar-desk"><div><h1>Pedidos</h1></div>
     <div class="acciones-topbar">
       <button class="btn btn-primary btn-sm" onclick="__nuevoPedidoManual()">＋ Nuevo pedido</button>
-      <label class="btn btn-ghost btn-sm import-btn" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG1" accept=".xlsx" style="display:none"></label>
     </div></div>`;
   h+=`<div class="grid g3 kpi-grid" style="margin-bottom:20px">
     ${kpiMini("En producción","🔨",activos.length,"var(--naranja-claro)")}
@@ -889,6 +937,9 @@ function renderPedidos(){
     ${activos.length?tablaPedidosProd(activos,false):'<div style="color:var(--gris);padding:10px">No hay pedidos activos.</div>'}</div>`;
   h+=`<div class="card"><div class="sec-head"><h2>✓ Historial de completados</h2></div>
     ${completados.length?tablaPedidosProd(completados,true):'<div style="color:var(--gris);padding:10px">Aún no hay completados.</div>'}</div>`;
+  h+=`<div class="pie-acciones">
+    <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG1" accept=".xlsx" style="display:none"></label>
+  </div>`;
   main.innerHTML=h;
   $("impVG1").onchange=__importarVentasGastosExcel;
 }
@@ -908,7 +959,11 @@ function tablaPedidosProd(lista,completado){
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
+          <div class="folio-cliente">
+            <div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div>
+            <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div>
+            <div class="acc-productos">${v.productos||'—'}</div>
+          </div>
           <div class="metrica"><div class="lbl">Tiempo</div><div class="val" style="color:${timerColor}">${timer.texto}</div></div>
           <div class="metrica"><div class="lbl">Anticipo</div><div class="val" style="color:${anticipo>0?'var(--azul)':'var(--gris)'}">${anticipo>0?'+'+fmt(anticipo):'$0'}</div></div>
         </div>
@@ -981,11 +1036,10 @@ function renderIngEgr(){
   const porCat={}; gastos.forEach(g=>{porCat[g.categoria||"Otro"]=(porCat[g.categoria||"Otro"]||0)+(+g.monto||0);});
   const utilidadNeta=totalCobrado-totalGastos;
 
-  let h=`<div class="topbar-desk"><div><h1>Ingresos y Egresos</h1><div class="sub">Seguimiento financiero completo</div></div>
+  let h=`<div class="topbar-desk"><div><h1>Ingresos y Egresos</h1></div>
     <div class="acciones-topbar">
       <button class="btn btn-primary btn-sm" onclick="__nuevoPedidoManual()">＋ Nueva venta</button>
       <button class="btn btn-primary btn-sm" onclick="__nuevoGasto()">＋ Nuevo gasto</button>
-      <label class="btn btn-ghost btn-sm import-btn" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG2" accept=".xlsx" style="display:none"></label>
     </div></div>`;
 
   h+=`<div class="grid g4" style="margin-bottom:20px">
@@ -1034,6 +1088,9 @@ function renderIngEgr(){
     </tr>`; });
   h+=`</tbody></table></div></div>`;
 
+  h+=`<div class="pie-acciones">
+    <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar Excel<input type="file" id="impVG2" accept=".xlsx" style="display:none"></label>
+  </div>`;
   main.innerHTML=h;
   $("impVG2").onchange=__importarVentasGastosExcel;
 }
@@ -1119,14 +1176,12 @@ window.__verPedido=(id)=>{
   const pag=pagosDe(v), falta=faltanteDe(v), pct=v.total?Math.min(100,pag/v.total*100):0;
   const completado=(v.estadoProd||"activo")==="completado";
   const pagosHtml=(v.pagos||[]).length?v.pagos.map((p,i)=>`<div class="quote-line"><span>${fmtFecha(p.fecha)} · ${p.metodo}</span><span style="color:var(--verde);font-weight:700">${fmt(p.monto)} <button onclick="__borrarAbono('${id}',${i})" style="color:var(--rojo);margin-left:8px">✕</button></span></div>`).join(""):'<div style="color:var(--gris);font-size:.85rem;padding:6px 0">Sin abonos aún</div>';
-  const itemsHtml=(v.items||[]).length?`<div style="background:var(--fondo);border-radius:12px;padding:12px;margin:8px 0"><div style="font-weight:700;font-size:.85rem;margin-bottom:6px">Productos del pedido</div>${v.items.map(it=>`<div style="font-size:.85rem;padding:4px 0;display:flex;justify-content:space-between"><span>${it.cant}× ${it.etiqueta}</span><span><b>${fmt(it.total)}</b></span></div>`).join('')}</div>`:'';
   abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
     <h2>${v.folio||'Pedido'}</h2><div class="msub">${v.cliente} · ${fmtFecha(v.fecha)}</div>
     <div style="display:flex;gap:8px;margin:8px 0 14px">
       ${completado?'<span class="pill verde">✓ Terminado</span>':'<span class="pill naranja">En producción</span>'}
       ${falta>0.01?`<span class="pill naranja">Falta ${fmt(falta)}</span>`:`<span class="pill verde">Saldado</span>`}
     </div>
-    ${itemsHtml}
     ${v.productos?`<div style="background:var(--fondo);border-radius:14px;padding:12px;margin:8px 0"><div style="font-weight:600">${v.productos}</div>${v.detalles?`<div style="font-size:.82rem;color:var(--gris);margin-top:6px">${v.detalles}</div>`:''}${v.referido?`<div style="font-size:.78rem;margin-top:8px"><span class="pill violeta">Referido: ${v.referido}</span></div>`:''}</div>`:''}
     <div class="quote-line"><span>Total</span><span><b>${fmt(v.total)}</b></span></div>
     <div class="quote-line"><span>Pagado</span><span style="color:var(--verde)">${fmt(pag)}</span></div>
@@ -1298,11 +1353,9 @@ function renderProductos(){
   let h=`<div class="topbar-desk"><div><h1>Productos</h1><div class="sub">Precios que usa el cotizador · toca cualquiera para editar</div></div>
     <div class="acciones-topbar">
       <button class="btn btn-amarillo btn-sm" onclick="__nuevoProductoCustom()">＋ Producto nuevo</button>
-      <label class="btn btn-ghost btn-sm import-btn" style="cursor:pointer;margin:0">⬆️ Importar de Excel<input type="file" id="impExcel" accept=".xlsx" style="display:none"></label>
     </div></div>`;
   const grupos=[
     ["🎨 Estampado Multicolor","estampado_multicolor"],
-    ["🎨 Estampado 1 Color","estampado_unicolor"],
     ["🧵 Bordado","bordado"],
     ["🏷️ Stickers (plantilla)","sticker_plantilla"],
     ["📦 Paquete Básico","paquete_basico"],
@@ -1333,6 +1386,9 @@ function renderProductos(){
     ${PRECIOS.calcomania.medidas.map((m,i)=>`<tr><td><b>${m}</b></td>${PRECIOS.calcomania.precios[i].map(p=>`<td>${fmt(p)}</td>`).join("")}</tr>`).join("")}
     </tbody></table></div><div style="font-size:.75rem;color:var(--gris);margin-top:8px">La matriz de calcomanías se edita en el código/Excel por ahora.</div></div>
     <div style="font-size:.8rem;color:var(--gris);margin-top:14px;padding:0 4px">💡 <b>Editar:</b> toca un precio y cámbialo — se guarda para ti y Paola al instante. <b>Importar:</b> sube tu Tabla Maestra y jala los precios competitivos de la hoja "Resumen General" automáticamente.</div>`;
+  h+=`<div class="pie-acciones">
+    <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">⬆️ Importar de Excel<input type="file" id="impExcel" accept=".xlsx" style="display:none"></label>
+  </div>`;
   main.innerHTML=h;
   $("impExcel").onchange=__importarExcel;
 }
