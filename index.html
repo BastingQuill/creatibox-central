@@ -839,10 +839,16 @@ function textoCotiCarritoParaCliente(){
 
 window.__terminarCotizacion=()=>{
   if(!carrito.length){ toast("Agrega al menos un producto"); return; }
-  const productos = carrito.map((x,i)=>`${i+1}. ${x.cant}× ${x.etiqueta}`).join('\n');
+  const textoCoti = textoCotiCarritoParaCliente();
   abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button>
-    <h2>Cotización terminada</h2><div class="msub">${carrito.length} producto${carrito.length>1?'s':''} · ${totalPiezasCarrito()} piezas · Total <b>${fmt(totalCarrito())}</b></div>
-    <div style="background:var(--fondo);border-radius:14px;padding:14px;margin:14px 0;font-size:.85rem;white-space:pre-line">${productos}</div>
+    <h2>Cotización terminada</h2>
+    <div style="background:var(--fondo);border-radius:14px;padding:14px;margin:14px 0;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:.78rem;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.03em">Texto de cotización</span>
+        <button class="btn btn-sm btn-ghost" onclick="__copiarTextoCoti()" style="padding:6px 12px;font-size:.78rem">📋 Copiar</button>
+      </div>
+      <div style="font-size:.82rem;white-space:pre-line;line-height:1.5;color:var(--tinta)">${textoCoti.replace(/</g,'&lt;')}</div>
+    </div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
       <button class="btn btn-wa" onclick="__enviarWhatsCliente()">📲 Enviar cotización por WhatsApp</button>
       <button class="btn btn-primary" onclick="__confirmarPedidoDesdeCarrito()">✓ Confirmar pedido nuevo</button>
@@ -854,6 +860,11 @@ window.__terminarCotizacion=()=>{
 window.__enviarWhatsCliente=()=>{
   const t=textoCotiCarritoParaCliente();
   window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank");
+};
+
+window.__copiarTextoCoti=()=>{
+  const texto=textoCotiCarritoParaCliente();
+  navigator.clipboard.writeText(texto).then(()=>toast("Texto copiado ✓")).catch(()=>toast("No se pudo copiar"));
 };
 
 window.__confirmarPedidoDesdeCarrito=()=>{
@@ -943,11 +954,11 @@ function renderPedidos(){
   main.innerHTML=h;
   $("impVG1").onchange=__importarVentasGastosExcel;
 }
-function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
-function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")); }
+function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="completado").sort((a,b)=>(b.folio||"").localeCompare(a.folio||"")); }
+function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.folio||"").localeCompare(a.folio||"")); }
 
 function tablaPedidosProd(lista,completado){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Tiempo</th><th>Productos</th><th>Anticipo</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Tiempo</th><th>Productos</th><th>Anticipo</th><th>Total</th><th>Estatus</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v);
     const anticipo=(v.pagos&&v.pagos.length)?(+v.pagos[0].monto||0):0;
@@ -975,6 +986,8 @@ function tablaPedidosProd(lista,completado){
       <td data-label="Tiempo transcurrido" style="color:${timerColor};font-weight:700">${timer.texto}</td>
       <td data-label="Productos" style="font-size:.85rem">${v.productos||'—'}</td>
       <td data-label="Anticipo" style="color:${anticipo>0?'var(--azul)':'var(--gris)'};font-weight:700">${anticipo>0?'+'+fmt(anticipo):'$0'}</td>
+      <td data-label="Total" style="color:var(--verde);font-weight:700">${fmt(v.total)}</td>
+      <td data-label="Estatus">${faltanteDe(v)>0.01?'<span class="pill naranja">Adeudo</span>':'<span class="pill verde">Pagado</span>'}</td>
       <td class="td-full td-acciones">
         <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Detalles</button>
         ${completado?'<span class="pill verde">Terminado</span>':`<button class="btn btn-sm btn-verde" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Completar</button>`}
@@ -1027,11 +1040,11 @@ window.__marcarCompletado=async(id)=>{
 
 function renderIngEgr(){
   const main=$("main");
-  const activos=ventas.filter(v=>faltanteDe(v)>0.01).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
-  const saldados=ventas.filter(v=>faltanteDe(v)<=0.01).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const activos=ventas.filter(v=>faltanteDe(v)>0.01).sort((a,b)=>(b.folio||"").localeCompare(a.folio||""));
+  const saldados=ventas.filter(v=>faltanteDe(v)<=0.01).sort((a,b)=>(b.folio||"").localeCompare(a.folio||""));
   const totalCobrado=ventas.reduce((s,v)=>s+pagosDe(v),0);
   const totalPorCobrar=ventas.reduce((s,v)=>s+faltanteDe(v),0);
-  const listaGastos=[...gastos].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  const listaGastos=[...gastos].sort((a,b)=>(b.folio||"").localeCompare(a.folio||""));
   const totalGastos=gastos.reduce((s,g)=>s+(+g.monto||0),0);
   const porCat={}; gastos.forEach(g=>{porCat[g.categoria||"Otro"]=(porCat[g.categoria||"Otro"]||0)+(+g.monto||0);});
   const utilidadNeta=totalCobrado-totalGastos;
