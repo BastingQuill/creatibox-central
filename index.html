@@ -104,6 +104,11 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .tabla tr:last-child td{border-bottom:none}
 .tabla tr.click{cursor:pointer}
 .tabla tr.click:hover td{background:var(--fondo)}
+.tabla-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabla.acordeon th{white-space:nowrap}
+.tabla.acordeon td{white-space:nowrap}
+.tabla.acordeon td[data-label="Productos"],
+.tabla.acordeon td[data-label="Concepto"]{white-space:normal;min-width:200px;max-width:400px}
 
 /* Sección título */
 .sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
@@ -958,7 +963,7 @@ function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="c
 function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.folio||"").localeCompare(a.folio||"")); }
 
 function tablaPedidosProd(lista,completado){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Tiempo</th><th>Productos</th><th>Anticipo</th><th>Total</th><th>Estatus</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Productos</th><th>Anticipo</th><th>Total</th><th>Estatus</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v);
     const anticipo=(v.pagos&&v.pagos.length)?(+v.pagos[0].monto||0):0;
@@ -975,15 +980,14 @@ function tablaPedidosProd(lista,completado){
             <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div>
             <div class="acc-productos">${v.productos||'—'}</div>
           </div>
-          <div class="metrica"><div class="lbl">Tiempo</div><div class="val" style="color:${timerColor}">${timer.texto}</div></div>
+          <div class="metrica"><div class="lbl">Total</div><div class="val" style="color:var(--verde)">${fmt(v.total)}</div></div>
           <div class="metrica"><div class="lbl">Anticipo</div><div class="val" style="color:${anticipo>0?'var(--azul)':'var(--gris)'}">${anticipo>0?'+'+fmt(anticipo):'$0'}</div></div>
         </div>
         <span class="caret">▸</span>
       </td>
       <td data-label="Folio" class="td-desk"><div style="font-weight:700"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div></td>
       <td data-label="Cliente" class="td-desk" style="font-weight:700">${v.cliente||'—'}</td>
-      <td data-label="Fecha">${fmtFecha(v.fecha)}</td>
-      <td data-label="Tiempo transcurrido" style="color:${timerColor};font-weight:700">${timer.texto}</td>
+      <td data-label="Fecha" style="color:${timerColor};font-weight:700">${fmtFecha(v.fecha)}</td>
       <td data-label="Productos" style="font-size:.85rem">${v.productos||'—'}</td>
       <td data-label="Anticipo" style="color:${anticipo>0?'var(--azul)':'var(--gris)'};font-weight:700">${anticipo>0?'+'+fmt(anticipo):'$0'}</td>
       <td data-label="Total" style="color:var(--verde);font-weight:700">${fmt(v.total)}</td>
