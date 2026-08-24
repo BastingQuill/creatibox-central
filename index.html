@@ -187,6 +187,26 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 /* Pie de página con acciones secundarias (Importar Excel al fondo) */
 .pie-acciones{margin-top:30px;padding:20px 0;border-top:1px solid var(--linea);display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 
+/* Celda de pagos con barra de progreso — para Ingresos y Egresos */
+.pagos-progreso{min-width:140px}
+.pagos-progreso .barra{height:6px;background:var(--linea);border-radius:99px;overflow:hidden;margin-bottom:4px}
+.pagos-progreso .barra .fill{height:100%;background:var(--azul);transition:width .2s}
+.pagos-progreso .barra .fill.saldado{background:var(--verde)}
+.pagos-progreso .linea{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.78rem;color:var(--gris);white-space:nowrap}
+.pagos-progreso .linea .abonado{color:var(--tinta);font-weight:600}
+.pagos-progreso .linea .falta{font-weight:700;color:var(--naranja)}
+.pagos-progreso .linea .falta.saldado{color:var(--verde)}
+
+/* Toggle de "Entregado" — checkbox redondo estilo iOS */
+.toggle-entregado{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:4px}
+.toggle-entregado input{position:absolute;opacity:0;pointer-events:none}
+.toggle-entregado .switch{width:38px;height:22px;background:var(--linea);border-radius:99px;position:relative;transition:background .15s;flex-shrink:0}
+.toggle-entregado .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:transform .15s}
+.toggle-entregado input:checked + .switch{background:var(--verde)}
+.toggle-entregado input:checked + .switch::after{transform:translateX(16px)}
+.toggle-entregado .label{font-size:.78rem;font-weight:700;color:var(--gris)}
+.toggle-entregado input:checked ~ .label{color:var(--verde)}
+
 /* Productos preview en móvil dentro de la tarjeta de Pedidos */
 .acc-productos{display:none;font-size:.78rem;color:var(--gris);font-weight:500;margin-top:6px;padding-left:17px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis}
 @media(min-width:861px){.acc-productos{display:none!important}}
@@ -963,7 +983,7 @@ function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="c
 function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.folio||"").localeCompare(a.folio||"")); }
 
 function tablaPedidosProd(lista,completado){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Productos</th><th>Anticipo</th><th>Total</th><th>Estatus</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Productos</th><th>Anticipo</th><th>Total</th><th>Faltante</th><th>Estatus</th><th>Entregado</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v);
     const anticipo=(v.pagos&&v.pagos.length)?(+v.pagos[0].monto||0):0;
@@ -972,6 +992,13 @@ function tablaPedidosProd(lista,completado){
     const statusColor = completado ? 'var(--verde)' : 'var(--naranja)';
     // Tiempo: negro si completado, color dinámico si activo
     const timerColor = completado ? 'var(--tinta)' : timer.color;
+    const falta=faltanteDe(v);
+    const entregado = v.entregado===true;
+    const toggleEntregado = `<label class="toggle-entregado" onclick="event.stopPropagation();">
+        <input type="checkbox" ${entregado?'checked':''} onchange="__toggleEntregado('${v.id}', this.checked)">
+        <span class="switch"></span>
+        <span class="label">${entregado?'Entregado':'Pendiente'}</span>
+      </label>`;
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
         <div class="cabecera-datos">
@@ -981,7 +1008,7 @@ function tablaPedidosProd(lista,completado){
             <div class="acc-productos">${v.productos||'—'}</div>
           </div>
           <div class="metrica"><div class="lbl">Total</div><div class="val" style="color:var(--verde)">${fmt(v.total)}</div></div>
-          <div class="metrica"><div class="lbl">Anticipo</div><div class="val" style="color:${anticipo>0?'var(--azul)':'var(--gris)'}">${anticipo>0?'+'+fmt(anticipo):'$0'}</div></div>
+          <div class="metrica"><div class="lbl">Falta</div><div class="val" style="color:${falta>0.01?'var(--naranja)':'var(--verde)'}">${falta>0.01?fmt(falta):'✓'}</div></div>
         </div>
         <span class="caret">▸</span>
       </td>
@@ -991,7 +1018,9 @@ function tablaPedidosProd(lista,completado){
       <td data-label="Productos" style="font-size:.85rem">${v.productos||'—'}</td>
       <td data-label="Anticipo" style="color:${anticipo>0?'var(--azul)':'var(--gris)'};font-weight:700">${anticipo>0?'+'+fmt(anticipo):'$0'}</td>
       <td data-label="Total" style="color:var(--verde);font-weight:700">${fmt(v.total)}</td>
+      <td data-label="Faltante" style="color:${falta>0.01?'var(--naranja)':'var(--verde)'};font-weight:700">${falta>0.01?fmt(falta):'✓ Saldado'}</td>
       <td data-label="Estatus">${faltanteDe(v)>0.01?'<span class="pill naranja">Adeudo</span>':'<span class="pill verde">Pagado</span>'}</td>
+      <td data-label="Entregado">${toggleEntregado}</td>
       <td class="td-full td-acciones">
         <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Detalles</button>
         ${completado?'<span class="pill verde">Terminado</span>':`<button class="btn btn-sm btn-verde" onclick="event.stopPropagation();__marcarCompletado('${v.id}')">✓ Completar</button>`}
@@ -1026,6 +1055,11 @@ function tiempoTranscurrido(v){
   if(completado) texto = "✓ "+texto;
   return {texto, color};
 }
+
+window.__toggleEntregado=async(id, checked)=>{
+  await updateDoc(doc(db,"ventas",id),{entregado:checked, fechaEntregado: checked?hoy():null});
+  toast(checked?"Marcado como entregado ✓":"Marcado como pendiente");
+};
 
 window.__marcarCompletado=async(id)=>{
   if(!confirm("¿Marcar este pedido como terminado? Seguirá visible en el historial.")) return;
@@ -1113,29 +1147,41 @@ function renderIngEgr(){
 }
 
 function tablaIngresos(lista){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Abonos</th><th>Faltante</th><th>Estatus</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Pagos</th><th>Estatus</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v), falta=faltanteDe(v);
+    const total=+v.total||0;
+    const pct = total>0 ? Math.min(100, Math.round(pag/total*100)) : 0;
+    const saldado = falta<=0.01;
     const completado=(v.estadoProd||"activo")==="completado";
-    // El punto de estatus refleja PRODUCCIÓN (consistente con Pedidos): verde=terminado, naranja=en producción.
     const statusColor = completado ? 'var(--verde)' : 'var(--naranja)';
     const prod = completado ? '<span class="pill verde">Terminado</span>' : '<span class="pill naranja">En producción</span>';
+    // Barra de progreso: azul mientras hay saldo pendiente, verde cuando está saldado
+    const barra = `<div class="pagos-progreso">
+        <div class="barra"><div class="fill ${saldado?'saldado':''}" style="width:${pct}%"></div></div>
+        <div class="linea"><span><span class="abonado">${fmt(pag)}</span> de ${fmt(total)}</span>
+        <span class="falta ${saldado?'saldado':''}">${saldado?'✓ Saldado':'Falta '+fmt(falta)}</span></div>
+      </div>`;
+    // Versión compacta para la tarjeta móvil (misma barra, sin card padding)
+    const barraMovil = `<div class="pagos-progreso" style="min-width:0;margin-top:6px">
+        <div class="barra"><div class="fill ${saldado?'saldado':''}" style="width:${pct}%"></div></div>
+        <div class="linea"><span><span class="abonado">${fmt(pag)}</span> de ${fmt(total)}</span>
+        <span class="falta ${saldado?'saldado':''}">${saldado?'✓ Saldado':'Falta '+fmt(falta)}</span></div>
+      </div>`;
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
-        <div class="cabecera-datos">
-          <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
-          <div class="metrica"><div class="lbl">Total</div><div class="val" style="color:var(--verde)">${fmt(v.total)}</div></div>
-          <div class="metrica"><div class="lbl">Abonos</div><div class="val" style="color:var(--azul)">+${fmt(pag)}</div></div>
-          ${falta>0.01?`<div class="metrica"><div class="lbl">Falta</div><div class="val" style="color:var(--naranja)">${fmt(falta)}</div></div>`:''}
+        <div style="width:100%">
+          <div class="cabecera-datos">
+            <div class="folio-cliente"><div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div><div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div></div>
+          </div>
+          ${barraMovil}
         </div>
         <span class="caret">▸</span>
       </td>
       <td data-label="Folio" class="td-desk"><div style="font-weight:700"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div></td>
       <td data-label="Cliente" class="td-desk" style="font-weight:700">${v.cliente||'—'}</td>
       <td data-label="Fecha">${fmtFecha(v.fecha)}</td>
-      <td data-label="Total" style="color:var(--verde);font-weight:700">${fmt(v.total)}</td>
-      <td data-label="Abonos" style="color:var(--azul);font-weight:700">+${fmt(pag)}</td>
-      <td data-label="Faltante" style="color:var(--naranja);font-weight:700">${falta>0.01?fmt(falta):'—'}</td>
+      <td data-label="Pagos">${barra}</td>
       <td data-label="Estatus">${prod}</td>
       <td class="td-full td-acciones">
         <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Detalles / abonar</button>
