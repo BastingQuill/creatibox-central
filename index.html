@@ -188,11 +188,11 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .pie-acciones{margin-top:30px;padding:20px 0;border-top:1px solid var(--linea);display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 
 /* Celda de pagos con barra de progreso — para Ingresos y Egresos */
-.pagos-progreso{min-width:140px}
+.pagos-progreso{min-width:105px;max-width:180px}
 .pagos-progreso .barra{height:6px;background:var(--linea);border-radius:99px;overflow:hidden;margin-bottom:4px}
 .pagos-progreso .barra .fill{height:100%;background:var(--azul);transition:width .2s}
 .pagos-progreso .barra .fill.saldado{background:var(--verde)}
-.pagos-progreso .linea{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.78rem;color:var(--gris);white-space:nowrap}
+.pagos-progreso .linea{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.72rem;color:var(--gris);white-space:nowrap}
 .pagos-progreso .linea .abonado{color:var(--tinta);font-weight:600}
 .pagos-progreso .linea .falta{font-weight:700;color:var(--naranja)}
 .pagos-progreso .linea .falta.saldado{color:var(--verde)}
@@ -983,32 +983,48 @@ function pedidosActivos(){ return ventas.filter(v=>(v.estadoProd||"activo")!=="c
 function pedidosCompletados(){ return ventas.filter(v=>v.estadoProd==="completado").sort((a,b)=>(b.folio||"").localeCompare(a.folio||"")); }
 
 function tablaPedidosProd(lista,completado){
-  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Productos</th><th>Anticipo</th><th>Total</th><th>Faltante</th><th>Estatus</th><th>Entregado</th></tr></thead><tbody>`;
+  let h=`<div class="tabla-wrap"><table class="tabla responsive acordeon"><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Productos</th><th>Anticipo</th><th>Pagos</th><th>Estatus</th><th>Entregado</th></tr></thead><tbody>`;
   lista.forEach(v=>{
     const pag=pagosDe(v);
     const anticipo=(v.pagos&&v.pagos.length)?(+v.pagos[0].monto||0):0;
     const timer=tiempoTranscurrido(v);
+    const total=+v.total||0;
+    const falta=faltanteDe(v);
+    const pct = total>0 ? Math.min(100, Math.round(pag/total*100)) : 0;
+    const saldado = falta<=0.01;
     // Status dot: solo 2 colores válidos — verde si completado, naranja si en producción. Nunca rojo.
     const statusColor = completado ? 'var(--verde)' : 'var(--naranja)';
     // Tiempo: negro si completado, color dinámico si activo
     const timerColor = completado ? 'var(--tinta)' : timer.color;
-    const falta=faltanteDe(v);
     const entregado = v.entregado===true;
     const toggleEntregado = `<label class="toggle-entregado" onclick="event.stopPropagation();">
         <input type="checkbox" ${entregado?'checked':''} onchange="__toggleEntregado('${v.id}', this.checked)">
         <span class="switch"></span>
         <span class="label">${entregado?'Entregado':'Pendiente'}</span>
       </label>`;
+    const barra = `<div class="pagos-progreso">
+        <div class="barra"><div class="fill ${saldado?'saldado':''}" style="width:${pct}%"></div></div>
+        <div class="linea"><span><span class="abonado">${fmt(pag)}</span> de ${fmt(total)}</span>
+        <span class="falta ${saldado?'saldado':''}">${saldado?'✓':'Falta '+fmt(falta)}</span></div>
+      </div>`;
+    const barraMovil = `<div class="pagos-progreso" style="min-width:0;max-width:none;margin-top:6px">
+        <div class="barra"><div class="fill ${saldado?'saldado':''}" style="width:${pct}%"></div></div>
+        <div class="linea"><span><span class="abonado">${fmt(pag)}</span> de ${fmt(total)}</span>
+        <span class="falta ${saldado?'saldado':''}">${saldado?'✓ Saldado':'Falta '+fmt(falta)}</span></div>
+      </div>`;
     h+=`<tr onclick="__togglePedido(this,'${v.id}')">
       <td class="acc-head">
-        <div class="cabecera-datos">
-          <div class="folio-cliente">
-            <div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div>
-            <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div>
-            <div class="acc-productos">${v.productos||'—'}</div>
+        <div style="width:100%">
+          <div class="cabecera-datos">
+            <div class="folio-cliente">
+              <div style="font-weight:800"><span class="status-dot" style="background:${statusColor}"></span>${v.folio||'—'}</div>
+              <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:17px">${v.cliente||'—'}</div>
+              <div class="acc-productos">${v.productos||'—'}</div>
+            </div>
+            <div class="metrica"><div class="lbl">Anticipo</div><div class="val" style="color:${anticipo>0?'var(--azul)':'var(--gris)'}">${anticipo>0?'+'+fmt(anticipo):'$0'}</div></div>
+            <div class="metrica"><div class="lbl">${entregado?'✓':'○'}</div><div class="val" style="color:${entregado?'var(--verde)':'var(--gris)'};font-size:.75rem">${entregado?'Entregado':'Pendiente'}</div></div>
           </div>
-          <div class="metrica"><div class="lbl">Total</div><div class="val" style="color:var(--verde)">${fmt(v.total)}</div></div>
-          <div class="metrica"><div class="lbl">Falta</div><div class="val" style="color:${falta>0.01?'var(--naranja)':'var(--verde)'}">${falta>0.01?fmt(falta):'✓'}</div></div>
+          ${barraMovil}
         </div>
         <span class="caret">▸</span>
       </td>
@@ -1017,9 +1033,8 @@ function tablaPedidosProd(lista,completado){
       <td data-label="Fecha" style="color:${timerColor};font-weight:700">${fmtFecha(v.fecha)}</td>
       <td data-label="Productos" style="font-size:.85rem">${v.productos||'—'}</td>
       <td data-label="Anticipo" style="color:${anticipo>0?'var(--azul)':'var(--gris)'};font-weight:700">${anticipo>0?'+'+fmt(anticipo):'$0'}</td>
-      <td data-label="Total" style="color:var(--verde);font-weight:700">${fmt(v.total)}</td>
-      <td data-label="Faltante" style="color:${falta>0.01?'var(--naranja)':'var(--verde)'};font-weight:700">${falta>0.01?fmt(falta):'✓ Saldado'}</td>
-      <td data-label="Estatus">${faltanteDe(v)>0.01?'<span class="pill naranja">Adeudo</span>':'<span class="pill verde">Pagado</span>'}</td>
+      <td data-label="Pagos">${barra}</td>
+      <td data-label="Estatus">${saldado?'<span class="pill verde">Pagado</span>':'<span class="pill naranja">Adeudo</span>'}</td>
       <td data-label="Entregado">${toggleEntregado}</td>
       <td class="td-full td-acciones">
         <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();__verPedido('${v.id}')">Detalles</button>
