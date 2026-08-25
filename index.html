@@ -405,7 +405,30 @@ function descMayoreoCalco(cant){ if(cant>=20) return 20; if(cant>=10) return 10;
 let productos=[], materia=[], ventas=[], gastos=[], pedidos=[], config={capitalInicial:0};
 let productosCustom=[]; // productos 100% nuevos creados por Abraham/Paola, con su propio desglose de materia prima
 let preciosOverride={}; // {grupo:{item:precio}} guardado en Firebase, pisa a PRECIOS
-function P(grupo,item){ if(preciosOverride[grupo]&&preciosOverride[grupo][item]!=null) return preciosOverride[grupo][item]; return PRECIOS[grupo]?.[item]; }
+function P(grupo,item){
+  if(preciosOverride[grupo]&&preciosOverride[grupo][item]!=null) return preciosOverride[grupo][item];
+  const base = PRECIOS[grupo]?.[item];
+  if(base!=null) return base;
+  // Producto personalizado con esta categoría — buscar por nombre
+  const custom = productosCustom.find(p => (p.categoria||"otros")===grupo && p.nombre===item);
+  return custom ? (+custom.precioVenta||0) : undefined;
+}
+/* Devuelve las opciones (nombres + precios + labels) de una categoría, mezclando
+   el catálogo base con los productos personalizados asignados a ella. Los custom
+   llevan un sufijo visual "★" en la etiqueta para que Abraham y Paola sepan que son suyos. */
+function opcionesDeCategoria(grupo){
+  const base = preciosDe(grupo);
+  const nombres = Object.keys(base);
+  const precios = {...base};
+  const labels = {};
+  nombres.forEach(n=>{labels[n]=n;});
+  productosCustom.filter(p => (p.categoria||"otros")===grupo).forEach(p=>{
+    nombres.push(p.nombre);
+    precios[p.nombre] = +p.precioVenta||0;
+    labels[p.nombre] = `${p.nombre} ★`; // asterisco = producto personalizado
+  });
+  return {nombres, precios, labels};
+}
 function preciosDe(grupo){ // devuelve objeto combinado base+override para un grupo simple
   const base={...(PRECIOS[grupo]||{})};
   if(preciosOverride[grupo]) Object.assign(base,preciosOverride[grupo]);
@@ -551,8 +574,8 @@ function pasoEstampado(){
   if(!coti.opciones.tecnica) coti.opciones.tecnica='estampado_multicolor';
   let h = '';
   {
-    const prendas = Object.keys(PRECIOS[coti.opciones.tecnica]);
-    h += `<label>Prenda</label>${chipsHTML(prendas, coti.opciones.prenda, 'prenda', PRECIOS[coti.opciones.tecnica])}`;
+    const opciones = opcionesDeCategoria(coti.opciones.tecnica);
+    h += `<label>Prenda</label>${chipsHTML(opciones.nombres, coti.opciones.prenda, 'prenda', opciones.precios, opciones.labels)}`;
   }
   if(coti.opciones.prenda){
     h += cantidadInput();
@@ -563,8 +586,8 @@ function pasoEstampado(){
 }
 /* ---- Bordado ---- */
 function pasoBordado(){
-  const prendas = Object.keys(PRECIOS.bordado);
-  let h = `<label>Prenda</label>${chipsHTML(prendas, coti.opciones.prenda, 'prenda', PRECIOS.bordado)}`;
+  const opciones = opcionesDeCategoria('bordado');
+  let h = `<label>Prenda</label>${chipsHTML(opciones.nombres, coti.opciones.prenda, 'prenda', opciones.precios, opciones.labels)}`;
   if(coti.opciones.prenda){
     h += cantidadInput();
     h += `<label>Tipo de bordado</label><div class="opt-grid">
@@ -586,8 +609,9 @@ function pasoSticker(){
     <button class="opt-card ${coti.opciones.modo==='plantilla'?'sel':''}" onclick="__cotiOpc('modo','plantilla')"><span class="emoji">🏷️</span>Plantilla suelta<div class="desc">Por unidad</div></button>
     <button class="opt-card ${coti.opciones.modo==='paquete'?'sel':''}" onclick="__cotiOpc('modo','paquete')"><span class="emoji">📦</span>Paquete<div class="desc">Básico o Escolar</div></button></div>`;
   if(coti.opciones.modo==='plantilla'){
-    const mats=Object.keys(PRECIOS.sticker_plantilla);
-    h += `<label>Material</label>${chipsHTML(mats, coti.opciones.material, 'material', PRECIOS.sticker_plantilla)}`;
+    // Sticker plantilla incluye materiales del catálogo + productos personalizados con categoría "sticker_plantilla"
+    const opciones = opcionesDeCategoria('sticker_plantilla');
+    h += `<label>Material</label>${chipsHTML(opciones.nombres, coti.opciones.material, 'material', opciones.precios, opciones.labels)}`;
     if(coti.opciones.material){ h += cantidadInput("Cantidad de plantillas"); }
   } else if(coti.opciones.modo==='paquete'){
     h += `<label>Tipo de paquete</label><div class="opt-grid">
@@ -617,8 +641,8 @@ function pasoCalcomania(){
 }
 /* ---- Otros ---- */
 function pasoOtros(){
-  const prods=Object.keys(PRECIOS.otros);
-  let h = `<label>Producto</label>${chipsHTML(prods, coti.opciones.producto, 'producto', PRECIOS.otros)}`;
+  const opciones = opcionesDeCategoria('otros');
+  let h = `<label>Producto</label>${chipsHTML(opciones.nombres, coti.opciones.producto, 'producto', opciones.precios, opciones.labels)}`;
   if(coti.opciones.producto) h += cantidadInput();
   return h;
 }
@@ -1443,22 +1467,35 @@ function renderProductos(){
   h+=`<div class="grid g2">`;
   grupos.forEach(([titulo,gid])=>{
     const obj=preciosDe(gid);
+    // Productos personalizados asignados a esta categoría
+    const customsAqui = productosCustom.filter(p => (p.categoria||"otros")===gid);
     h+=`<div class="card"><div class="sec-head"><h2 style="font-size:1rem">${titulo}</h2></div><table class="tabla"><tbody>`;
     Object.entries(obj).forEach(([k,v])=>{
       h+=`<tr class="click" onclick="__editarPrecio('${gid}','${k.replace(/'/g,"\\'")}')"><td>${k}</td><td style="text-align:right;font-weight:700">${fmt(v)} <span style="color:var(--violeta)">✎</span></td></tr>`;
     });
+    // Personalizados de esta categoría — con badge "Personalizado" para distinguirlos del catálogo base
+    customsAqui.forEach(p=>{
+      h+=`<tr class="click" onclick="__editarProductoCustom('${p.id}')"><td>${p.nombre} <span class="pill violeta" style="font-size:.62rem;padding:2px 8px;margin-left:4px">Personalizado</span></td><td style="text-align:right;font-weight:700">${fmt(p.precioVenta)} <span style="color:var(--violeta)">✎</span></td></tr>`;
+    });
     h+=`</tbody></table></div>`;
   });
   h+=`</div>`;
-  h+=`<div class="card" style="margin-top:16px"><div class="sec-head"><h2 style="font-size:1rem">🆕 Productos Personalizados</h2></div>
-    ${productosCustom.length?`<table class="tabla responsive"><thead><tr><th>Producto</th><th>Costo</th><th>Precio</th><th>Margen</th><th></th></tr></thead><tbody>
-      ${productosCustom.map(p=>{
-        const costo=(p.materiales||[]).reduce((s,m)=>s+(+m.cantidad||0)*(+m.costoUnitario||0),0)+(+p.manoObra||0)+(+p.otrosCostos||0);
-        const margen=p.precioVenta?((p.precioVenta-costo)/p.precioVenta*100):0;
-        return `<tr class="click" onclick="__editarProductoCustom('${p.id}')"><td data-label="Producto"><b>${p.nombre}</b></td><td data-label="Costo">${fmt2(costo)}</td><td data-label="Precio" style="font-weight:700">${fmt(p.precioVenta)}</td><td data-label="Margen"><span class="pill ${margen>=0?'verde':'rojo'}">${margen.toFixed(0)}%</span></td><td data-label="">›</td></tr>`;
-      }).join("")}
-    </tbody></table>`:'<div style="color:var(--gris);padding:6px 0;font-size:.88rem">Aún no agregas productos personalizados. Úsalo para artículos nuevos que no están en tu catálogo base (cake toppers, encargos especiales, etc.), con su propio desglose de materia prima.</div>'}
-  </div>`;
+  // Sólo mostrar la sección "Personalizados" para los que NO tienen categoría (para no duplicar los que ya aparecen arriba en su cat.)
+  // Nota: los productos personalizados con categoría "otros" ya se muestran arriba en el card "🎁 Otros",
+  // así que esta tarjeta queda como fallback histórico para productos sin categoría asignada.
+  const sinCategoria = productosCustom.filter(p => !p.categoria);
+  if(sinCategoria.length){
+    h+=`<div class="card" style="margin-top:16px"><div class="sec-head"><h2 style="font-size:1rem">🆕 Sin categoría asignada</h2></div>
+      <table class="tabla responsive"><thead><tr><th>Producto</th><th>Costo</th><th>Precio</th><th>Margen</th><th></th></tr></thead><tbody>
+        ${sinCategoria.map(p=>{
+          const costo=(p.materiales||[]).reduce((s,m)=>s+(+m.cantidad||0)*(+m.costoUnitario||0),0)+(+p.manoObra||0)+(+p.otrosCostos||0);
+          const margen=p.precioVenta?((p.precioVenta-costo)/p.precioVenta*100):0;
+          return `<tr class="click" onclick="__editarProductoCustom('${p.id}')"><td data-label="Producto"><b>${p.nombre}</b></td><td data-label="Costo">${fmt2(costo)}</td><td data-label="Precio" style="font-weight:700">${fmt(p.precioVenta)}</td><td data-label="Margen"><span class="pill ${margen>=0?'verde':'rojo'}">${margen.toFixed(0)}%</span></td><td data-label="">›</td></tr>`;
+        }).join("")}
+      </tbody></table>
+      <div style="font-size:.75rem;color:var(--gris);margin-top:8px">Estos productos se crearon antes del sistema de categorías. Ábrelos y asígnales una para que aparezcan agrupados.</div>
+    </div>`;
+  }
   h+=`<div class="card" style="margin-top:16px"><h2 style="font-size:1rem;margin-bottom:8px">🎯 Calcomanías (por tamaño)</h2>
     <div class="matriz-scroll"><table class="tabla"><thead><tr><th>cm</th>${PRECIOS.calcomania.medidas.map(m=>`<th>${m}</th>`).join("")}</tr></thead><tbody>
     ${PRECIOS.calcomania.medidas.map((m,i)=>`<tr><td><b>${m}</b></td>${PRECIOS.calcomania.precios[i].map(p=>`<td>${fmt(p)}</td>`).join("")}</tr>`).join("")}
@@ -1499,7 +1536,7 @@ window.__resetPrecio=async(gid,item)=>{
 let productoCustomBuffer=null; // {id?, nombre, precioVenta, materiales:[{materialId,nombre,cantidad,costoUnitario}], manoObra, otrosCostos, notas}
 
 window.__nuevoProductoCustom=()=>{
-  productoCustomBuffer={nombre:"",precioVenta:"",materiales:[],manoObra:0,otrosCostos:0,notas:""};
+  productoCustomBuffer={nombre:"",categoria:"otros",precioVenta:"",materiales:[],manoObra:0,otrosCostos:0,notas:""};
   abrirModal(modalProductoCustomHTML());
 };
 window.__editarProductoCustom=(id)=>{
@@ -1522,9 +1559,16 @@ function modalProductoCustomHTML(){
   const utilidad=precio-total;
   const margen=precio?utilidad/precio*100:0;
   const opcionesMaterial=materia.slice().sort((a,b2)=>(a.nombre||"").localeCompare(b2.nombre||""));
+  const cat=b.categoria||"otros";
   return `<button class="modal-close" onclick="__cerrar()">✕</button>
     <h2>${b.id?'Editar producto':'Producto nuevo'}</h2><div class="msub">Arma el costo real con tu materia prima</div>
     <label>Nombre del producto</label><input id="pcNombre" value="${(b.nombre||'').replace(/"/g,'&quot;')}" oninput="__pcCampo('nombre',this.value)" placeholder="Ej. Cake Topper personalizado">
+    <label>Categoría</label><select id="pcCategoria" onchange="__pcCampo('categoria',this.value)">
+      <option value="estampado_multicolor" ${cat==='estampado_multicolor'?'selected':''}>🎨 Estampado Multicolor</option>
+      <option value="bordado" ${cat==='bordado'?'selected':''}>🧵 Bordado</option>
+      <option value="sticker_plantilla" ${cat==='sticker_plantilla'?'selected':''}>🏷️ Stickers</option>
+      <option value="otros" ${cat==='otros'?'selected':''}>🎁 Otros</option>
+    </select>
     <label>Precio de venta al público ($)</label><input type="number" id="pcPrecio" value="${b.precioVenta||''}" oninput="__pcCampo('precioVenta',this.value)" placeholder="0">
 
     <div style="background:var(--fondo);border-radius:14px;padding:14px;margin-top:16px">
@@ -1574,8 +1618,9 @@ window.__guardarProductoCustom=async()=>{
   const b=productoCustomBuffer;
   b.nombre=$("pcNombre").value.trim(); b.precioVenta=parseFloat($("pcPrecio").value)||0;
   b.manoObra=parseFloat($("pcManoObra").value)||0; b.otrosCostos=parseFloat($("pcOtros").value)||0; b.notas=$("pcNotas").value.trim();
+  b.categoria=$("pcCategoria").value||"otros";
   if(!b.nombre){ toast("Ponle nombre al producto"); return; }
-  const datos={nombre:b.nombre,precioVenta:b.precioVenta,materiales:b.materiales||[],manoObra:b.manoObra,otrosCostos:b.otrosCostos,notas:b.notas||null};
+  const datos={nombre:b.nombre,categoria:b.categoria,precioVenta:b.precioVenta,materiales:b.materiales||[],manoObra:b.manoObra,otrosCostos:b.otrosCostos,notas:b.notas||null};
   if(b.id) await updateDoc(doc(db,"productosCustom",b.id),datos);
   else await addDoc(collection(db,"productosCustom"),datos);
   cerrarModal(); toast("Producto guardado ✓");
