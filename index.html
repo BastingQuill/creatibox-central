@@ -211,80 +211,90 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .acc-productos{display:none;font-size:.78rem;color:var(--gris);font-weight:500;margin-top:6px;padding-left:17px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis}
 @media(min-width:861px){.acc-productos{display:none!important}}
 
-/* ============ PROD — Tablero de producción ============ */
-.prod-lista{display:flex;flex-direction:column;gap:16px}
-.prod-card{background:var(--blanco);border-radius:18px;padding:20px;box-shadow:var(--sombra);border:1.5px solid var(--linea);transition:all .2s}
-.prod-card.terminado{border-color:var(--verde);background:linear-gradient(180deg,rgba(16,185,129,.03),var(--blanco))}
-.prod-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px dashed var(--linea)}
+/* ============ PROD — Tablero horizontal de producción ============ */
+.prod-lista{display:flex;flex-direction:column;gap:12px}
+.prod-card{background:var(--blanco);border-radius:14px;padding:18px 20px;box-shadow:var(--sombra);border:1.5px solid var(--linea);transition:all .2s}
+.prod-card.terminado{border-color:var(--verde);opacity:.75}
+.prod-card-grid{display:grid;grid-template-columns:70px 110px 80px minmax(180px,1fr) 85px minmax(400px,2fr) 70px;gap:14px;align-items:center}
 
-/* Ring de progreso circular */
-.prod-progreso{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.prod-col-lbl{font-size:.65rem;font-weight:800;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.prod-col-val{font-size:.9rem;color:var(--tinta)}
+.prod-cat-tag{font-size:.7rem;color:var(--violeta);font-weight:700;text-align:center;margin-top:6px}
+
+/* Botón prioridad — texto en color según nivel, se cicla al tocar */
+.prod-prio-btn{font-size:.9rem;font-weight:800;padding:6px 10px;border-radius:8px;transition:background .15s}
+.prod-prio-btn:hover{background:var(--fondo)}
+
+/* Timeline horizontal de pasos */
+.prod-timeline{display:flex;align-items:flex-start;justify-content:flex-start;gap:0;overflow-x:auto;padding:4px 2px}
+.prod-paso-wrap{display:flex;flex-direction:column;align-items:center;flex:1;min-width:78px}
+.prod-paso-lbl{font-size:.6rem;font-weight:800;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin-bottom:6px;height:28px;display:flex;align-items:flex-start;justify-content:center;line-height:1.15;padding:0 2px}
+.prod-paso-fila{display:flex;align-items:center;width:100%;position:relative}
+
+/* Círculo del paso — 3 estados: pendiente, actual, done */
+.prod-paso-circ{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.82rem;font-weight:800;
+  border:2px solid var(--linea);background:var(--blanco);color:var(--gris-claro);
+  flex-shrink:0;transition:all .2s cubic-bezier(.4,0,.2,1);cursor:pointer;
+}
+.prod-paso-circ:hover{transform:scale(1.08);border-color:var(--violeta)}
+.prod-paso-circ.pendiente{}
+.prod-paso-circ.actual{border-color:var(--violeta);color:var(--violeta);border-width:2.5px}
+.prod-paso-circ.done{background:var(--verde);border-color:var(--verde);color:#fff}
+.prod-paso-circ .check{font-size:.95rem;font-weight:900}
+
+/* Conector (línea) entre pasos */
+.prod-conector{flex:1;height:3px;background:var(--linea);transition:background .3s}
+.prod-conector.done{background:var(--verde)}
+
+/* Flecha ↑ debajo del paso actual */
+.prod-flecha{font-size:1rem;color:var(--gris-claro);font-weight:800;margin-top:4px;animation:prod-bounce 1.5s ease-in-out infinite}
+.prod-flecha-holder{height:20px;margin-top:4px}
+@keyframes prod-bounce{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-3px)}
+}
+
+/* Anillo circular de progreso (a la derecha) */
+.prod-col-anillo{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
 .prod-progreso-circular{
-  width:60px;height:60px;border-radius:50%;
+  width:52px;height:52px;border-radius:50%;
   background: conic-gradient(var(--violeta) calc(var(--pct)*1%), var(--linea) 0);
-  display:flex;align-items:center;justify-content:center;
-  position:relative;
+  display:flex;align-items:center;justify-content:center;position:relative;
+  transition:background .4s;
 }
-.prod-progreso-circular::before{
-  content:"";position:absolute;inset:5px;border-radius:50%;background:var(--blanco);
-}
+.prod-progreso-circular::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--blanco)}
 .prod-card.terminado .prod-progreso-circular{background: conic-gradient(var(--verde) 100%, var(--linea) 0)}
-.prod-pct{position:relative;z-index:1;font-size:.82rem;font-weight:800;color:var(--tinta)}
-.prod-progreso-txt{font-size:.7rem;color:var(--gris);font-weight:600}
+.prod-pct{position:relative;z-index:1;font-size:.72rem;font-weight:800;color:var(--tinta)}
+.prod-progreso-txt{font-size:.68rem;color:var(--gris);font-weight:700}
 
-/* Secciones del checklist (Inicio + ramas por categoría) */
-.prod-body{display:flex;flex-direction:column;gap:14px}
-.prod-seccion{background:var(--fondo);border-radius:12px;padding:12px 14px}
-.prod-seccion-titulo{font-size:.78rem;font-weight:800;color:var(--gris);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
-
-/* Los pasos individuales — checkbox estilo apps modernas de to-do */
-.prod-paso{display:flex;align-items:center;gap:12px;padding:9px 4px;cursor:pointer;user-select:none;border-radius:8px;transition:background .15s}
-.prod-paso:hover{background:rgba(124,58,237,.05)}
-.prod-paso input{position:absolute;opacity:0;pointer-events:none}
-.prod-check{
-  width:22px;height:22px;border-radius:7px;
-  border:2px solid var(--linea);
-  background:var(--blanco);
-  display:flex;align-items:center;justify-content:center;
-  transition:all .18s cubic-bezier(.4,0,.2,1);
-  flex-shrink:0;
-}
-.prod-check .checkmark{
-  color:#fff;font-size:.8rem;font-weight:900;
-  opacity:0;transform:scale(0);
-  transition:all .18s cubic-bezier(.4,0,.2,1);
-}
-.prod-paso input:checked ~ .prod-check{
-  background:var(--violeta);
-  border-color:var(--violeta);
-  transform:scale(1.05);
-}
-.prod-paso input:checked ~ .prod-check .checkmark{
-  opacity:1;transform:scale(1);
-}
-.prod-paso-txt{font-size:.9rem;font-weight:600;color:var(--tinta);transition:all .18s;flex:1}
-.prod-paso.done .prod-paso-txt{color:var(--gris-claro);text-decoration:line-through;text-decoration-color:var(--gris-claro)}
-
-/* Animación de celebración cuando marcas un paso */
-@keyframes prod-pop{
-  0%{transform:scale(1)}
-  40%{transform:scale(1.15)}
-  100%{transform:scale(1.05)}
-}
-@keyframes prod-glow{
-  0%{box-shadow:0 0 0 0 rgba(124,58,237,.4)}
-  100%{box-shadow:0 0 0 12px rgba(124,58,237,0)}
-}
-.prod-paso.celebrando .prod-check{
-  animation: prod-pop .4s ease, prod-glow .5s ease-out;
-}
-
-/* Ajuste móvil: card más compacto */
+/* Móvil — reacomodar en 2 renglones */
 @media(max-width:860px){
-  .prod-card{padding:16px}
-  .prod-header{flex-direction:column;align-items:stretch;gap:12px}
-  .prod-progreso{flex-direction:row;align-self:flex-end;gap:8px}
-  .prod-progreso-circular{width:52px;height:52px}
+  .prod-card{padding:14px}
+  /* Cambiar el grid: header en línea 1, productos en línea 2, prioridad+anillo en línea 3, timeline abajo en 2 renglones */
+  .prod-card-grid{
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "folio cliente"
+      "fecha prioridad"
+      "productos productos"
+      "timeline timeline"
+      "anillo anillo";
+    gap:10px;
+  }
+  .prod-col-info:nth-child(1){grid-area:folio}
+  .prod-col-info:nth-child(2){grid-area:cliente}
+  .prod-col-info:nth-child(3){grid-area:fecha}
+  .prod-col-productos{grid-area:productos}
+  .prod-col-info:nth-child(5){grid-area:prioridad}
+  .prod-col-timeline{grid-area:timeline;padding-top:8px;border-top:1px dashed var(--linea)}
+  .prod-col-anillo{grid-area:anillo;flex-direction:row;justify-content:center;padding-top:4px}
+  .prod-timeline{flex-wrap:wrap;row-gap:16px}
+  .prod-paso-wrap{flex:0 0 25%;min-width:0}
+  .prod-paso-wrap .prod-conector{display:none}
+  .prod-paso-lbl{font-size:.58rem;height:auto;min-height:24px}
 }
 
 @media(max-width:860px){
@@ -2011,93 +2021,113 @@ function renderVIP(){
    NAVEGACIÓN + ARRANQUE
    ===================================================================== */
 /* =====================================================================
-   PROD — Tablero visual de producción con checklists por categoría
+   PROD — Tablero horizontal de producción por pasos
    ===================================================================== */
 
-/* Pasos comunes al inicio de TODOS los pedidos */
-const PROD_PASOS_INICIO = ["Anticipo", "Diseño", "Aprobación del cliente"];
+/* Orden GLOBAL fijo de todos los pasos posibles. Cada pedido tomará solo los
+   que aplican según las categorías detectadas en sus items, respetando este orden.
+   Anticipo y Diseño y Aprobación son SIEMPRE los primeros dos.
+   Empaquetado y Envío son SIEMPRE los últimos dos. */
+const PROD_ORDEN_GLOBAL = [
+  "Anticipo",
+  "Diseño y Aprobación",
+  "Acomodo",       // Stickers/Calcomanías
+  "Impresión",     // Stickers/Calcomanías y Estampado (compartido)
+  "Planchado",     // Estampado
+  "Bordado",       // Bordado
+  "Corte",         // Stickers/Calcomanías
+  "Fabricación",   // Otros
+  "Empaquetado",
+  "Envío"
+];
 
-/* Ramas por categoría. Los "servicio" del cotizador coinciden con la
-   categoría del producto personalizado (estampado, bordado, sticker, calcomania, otros). */
+/* Pasos que cada categoría aporta al workflow global. Los primeros dos (Anticipo,
+   Diseño y Aprobación) y últimos dos (Empaquetado, Envío) son universales, no van aquí. */
 const PROD_PASOS_POR_CAT = {
-  estampado_multicolor: ["Impresión y corte", "Planchado", "Empaquetado", "Envío", "Completado"],
-  bordado:              ["Bordado", "Empaquetado", "Envío", "Completado"],
-  sticker_plantilla:    ["Acomodo", "Impresión", "Corte", "Empaquetado", "Envío", "Completado"],
-  calcomania:           ["Acomodo", "Impresión", "Corte", "Empaquetado", "Envío", "Completado"],
-  otros:                ["Fabricación", "Empaquetado", "Envío", "Completado"]
+  estampado_multicolor: ["Impresión", "Planchado"],
+  bordado:              ["Bordado"],
+  sticker_plantilla:    ["Acomodo", "Impresión", "Corte"],
+  calcomania:           ["Acomodo", "Impresión", "Corte"],
+  otros:                ["Fabricación"]
 };
 
-/* Etiquetas legibles de cada categoría (para los encabezados de rama) */
-const PROD_CAT_NOMBRES = {
-  estampado_multicolor: "🎨 Estampado",
-  bordado:              "🧵 Bordado",
-  sticker_plantilla:    "🏷️ Stickers",
-  calcomania:           "🏷️ Calcomanías",
-  otros:                "🎁 Otros"
+/* Etiqueta legible de la categoría (para el texto "(CATEGORÍA)" bajo productos) */
+const PROD_CAT_ETIQUETA = {
+  estampado_multicolor: "ESTAMPADO",
+  bordado:              "BORDADO",
+  sticker_plantilla:    "STICKERS",
+  calcomania:           "CALCOMANÍAS",
+  otros:                "OTROS"
 };
 
-/* Mapa servicio-del-cotizador -> categoría (para items del catálogo base) */
+/* Servicio del cotizador -> categoría (para items del catálogo base) */
 const PROD_SERVICIO_A_CAT = {
   estampado:  "estampado_multicolor",
   bordado:    "bordado",
   sticker:    "sticker_plantilla",
   calcomania: "calcomania",
   otros:      "otros",
-  personalizado: null // se resuelve por el categoría del producto custom
+  personalizado: null
 };
 
-/* Devuelve las categorías presentes en un pedido, en orden de aparición y sin duplicados. */
+/* Detecta las categorías presentes en el pedido, sin duplicados. */
 function prodCategoriasDePedido(v){
   const cats = [];
   (v.items||[]).forEach(it=>{
     let cat = PROD_SERVICIO_A_CAT[it.servicio];
-    // Si es producto personalizado, resolver por su categoría
     if(!cat && it._costeo && it._costeo.custom && it._costeo.producto){
       cat = it._costeo.producto.categoria || "otros";
     }
-    // Fallback: si no supimos qué es (pedidos antiguos), asumir "otros"
     if(!cat) cat = "otros";
     if(!cats.includes(cat)) cats.push(cat);
   });
-  // Si no hay items (pedidos importados de Excel), asumir "otros" como default
   if(cats.length===0) cats.push("otros");
   return cats;
 }
 
-/* Devuelve la lista completa de pasos de un pedido, en secciones:
-   [{titulo:"Inicio", pasos:["Anticipo",...]}, {titulo:"🎨 Estampado", pasos:[...]}, ...] */
+/* Construye el workflow único del pedido:
+   - Anticipo + Diseño y Aprobación (siempre)
+   - Los pasos únicos que aportan las categorías detectadas, en orden global fijo
+   - Empaquetado + Envío (siempre)
+   Ejemplo Sticker+Estampado: Anticipo, Diseño y Aprobación, Acomodo, Impresión (compartida), Planchado, Corte, Empaquetado, Envío */
 function prodPasosDe(v){
-  const secciones = [{titulo:"📋 Inicio", pasos: PROD_PASOS_INICIO}];
-  prodCategoriasDePedido(v).forEach(cat=>{
-    secciones.push({titulo: PROD_CAT_NOMBRES[cat]||cat, pasos: PROD_PASOS_POR_CAT[cat]||PROD_PASOS_POR_CAT.otros});
+  const cats = prodCategoriasDePedido(v);
+  const requeridos = new Set(["Anticipo", "Diseño y Aprobación", "Empaquetado", "Envío"]);
+  cats.forEach(cat=>{
+    (PROD_PASOS_POR_CAT[cat]||PROD_PASOS_POR_CAT.otros).forEach(p=>requeridos.add(p));
   });
-  return secciones;
+  // Filtrar el orden global dejando solo los que aplican
+  return PROD_ORDEN_GLOBAL.filter(p=>requeridos.has(p));
 }
 
-/* Todos los pasos "aplanados" con clave única "seccion::paso" para persistir en Firestore */
-function prodPasosAplanados(v){
-  const flat = [];
-  prodPasosDe(v).forEach(sec=>{
-    sec.pasos.forEach(p=> flat.push({key: `${sec.titulo}::${p}`, seccion: sec.titulo, paso: p}));
-  });
-  return flat;
-}
-
-/* Calcula progreso: {marcados, total, pct} */
+/* Calcula progreso: {marcados, total, pct, idxActual}
+   idxActual = índice del primer paso NO marcado (donde va la flecha). Si todos marcados = total. */
 function prodProgreso(v){
-  const flat = prodPasosAplanados(v);
+  const pasos = prodPasosDe(v);
   const marcados = v.prodChecks || {};
-  const done = flat.filter(f => marcados[f.key]===true).length;
-  return {marcados: done, total: flat.length, pct: flat.length? Math.round(done/flat.length*100):0};
+  let done = 0;
+  let idxActual = pasos.length;
+  for(let i=0;i<pasos.length;i++){
+    if(marcados[pasos[i]]===true) done++;
+    else if(idxActual===pasos.length) idxActual = i;
+  }
+  return {marcados: done, total: pasos.length, pct: pasos.length?Math.round(done/pasos.length*100):0, idxActual};
 }
+
+/* Prioridad: baja | media | alta. Default = baja (según lo definido). */
+function prodPrioridad(v){ return v.prioridad || "baja"; }
+
+const PROD_PRIO_CONFIG = {
+  baja:  {label:"BAJA",  color:"var(--verde)"},
+  media: {label:"MEDIA", color:"var(--naranja)"},
+  alta:  {label:"ALTA",  color:"var(--rojo)"}
+};
 
 /* Filtro visual (activos vs completados) */
-let prodFiltro = "activos"; // "activos" | "completados" | "todos"
+let prodFiltro = "activos";
 
 function renderProd(){
   const main = $("main");
-  // Todos los pedidos que aún no están marcados como "completado" en el sistema Pedidos,
-  // más aquellos completados recientemente para poder consultarlos.
   const activos = ventas.filter(v => (v.estadoProd||"activo")==="activo");
   const completados = ventas.filter(v => v.estadoProd==="completado");
 
@@ -2106,10 +2136,15 @@ function renderProd(){
   else if(prodFiltro==="completados") lista = completados;
   else lista = [...activos, ...completados];
 
-  // Ordenar activos: menos completos primero (para que veas primero lo que urge trabajar);
-  // completados: más recientes primero.
+  // Ordenar activos: por prioridad (alta primero), luego menos avance
   if(prodFiltro==="activos"){
-    lista.sort((a,b)=> prodProgreso(a).pct - prodProgreso(b).pct);
+    const prioRank = {alta:0, media:1, baja:2};
+    lista.sort((a,b)=>{
+      const pa = prioRank[prodPrioridad(a)]||3;
+      const pb = prioRank[prodPrioridad(b)]||3;
+      if(pa!==pb) return pa-pb;
+      return prodProgreso(a).pct - prodProgreso(b).pct;
+    });
   } else {
     lista.sort((a,b)=> (b.fecha||"").localeCompare(a.fecha||""));
   }
@@ -2138,81 +2173,98 @@ function renderProd(){
 
 function renderProdCard(v){
   const prog = prodProgreso(v);
+  const pasos = prodPasosDe(v);
   const marcados = v.prodChecks || {};
-  const secciones = prodPasosDe(v);
-  const completoTotal = prog.marcados===prog.total && prog.total>0;
   const yaCompletado = v.estadoProd==="completado";
+  const prio = prodPrioridad(v);
+  const prioCfg = PROD_PRIO_CONFIG[prio];
 
-  let secHtml = "";
-  secciones.forEach(sec=>{
-    secHtml += `<div class="prod-seccion">
-      <div class="prod-seccion-titulo">${sec.titulo}</div>`;
-    sec.pasos.forEach(paso=>{
-      const key = `${sec.titulo}::${paso}`;
-      const checked = marcados[key]===true;
-      secHtml += `<label class="prod-paso ${checked?'done':''}">
-        <input type="checkbox" ${checked?'checked':''} onchange="__prodToggle('${v.id}','${key.replace(/'/g,"\\'")}',this.checked)">
-        <span class="prod-check"><span class="checkmark">✓</span></span>
-        <span class="prod-paso-txt">${paso}</span>
-      </label>`;
-    });
-    secHtml += `</div>`;
+  // Categorías detectadas → texto legible bajo productos
+  const cats = prodCategoriasDePedido(v);
+  const catTxt = cats.map(c=>PROD_CAT_ETIQUETA[c]||c.toUpperCase()).join(" · ");
+
+  // Pasos como línea horizontal
+  let pasosHtml = `<div class="prod-timeline">`;
+  pasos.forEach((paso, i)=>{
+    const checked = marcados[paso]===true;
+    const esActual = !checked && i===prog.idxActual;
+    let claseCirc = "pendiente";
+    let contenido = `<span class="num">${i+1}</span>`;
+    if(checked){ claseCirc = "done"; contenido = `<span class="check">✓</span>`; }
+    else if(esActual){ claseCirc = "actual"; }
+
+    // La línea a la derecha de cada paso (menos el último): verde si el paso está done
+    const conector = i<pasos.length-1 ? `<div class="prod-conector ${checked?'done':''}"></div>` : '';
+
+    pasosHtml += `<div class="prod-paso-wrap">
+      <div class="prod-paso-lbl">${paso.toUpperCase()}</div>
+      <div class="prod-paso-fila">
+        <button class="prod-paso-circ ${claseCirc}" onclick="__prodToggle('${v.id}','${paso.replace(/'/g,"\\'")}',${!checked})" title="${checked?'Marcar como pendiente':'Marcar como completado'}">${contenido}</button>
+        ${conector}
+      </div>
+      ${esActual?'<div class="prod-flecha">↑</div>':'<div class="prod-flecha-holder"></div>'}
+    </div>`;
   });
+  pasosHtml += `</div>`;
 
   const productosTxt = v.productos || (v.items||[]).map(it=>`${it.cant}× ${it.etiqueta}`).join(" · ") || "—";
 
-  return `<div class="prod-card ${completoTotal?'terminado':''}" id="prod-${v.id}">
-    <div class="prod-header">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <div style="font-weight:800;font-size:1.05rem">${v.folio||'—'}</div>
-          <div style="font-weight:700;color:var(--tinta)">${v.cliente||'—'}</div>
-          <div style="font-size:.78rem;color:var(--gris)">· ${fmtFecha(v.fecha)}</div>
-          ${yaCompletado?'<span class="pill verde">Terminado</span>':''}
-        </div>
-        <div style="font-size:.82rem;color:var(--gris);margin-top:4px;line-height:1.35">${productosTxt}</div>
+  return `<div class="prod-card ${yaCompletado?'terminado':''}" id="prod-${v.id}">
+    <div class="prod-card-grid">
+      <div class="prod-col prod-col-info">
+        <div class="prod-col-lbl">FOLIO</div>
+        <div class="prod-col-val" style="font-weight:800">${v.folio||'—'}</div>
       </div>
-      <div class="prod-progreso">
+      <div class="prod-col prod-col-info">
+        <div class="prod-col-lbl">CLIENTE</div>
+        <div class="prod-col-val" style="font-weight:700">${v.cliente||'—'}</div>
+      </div>
+      <div class="prod-col prod-col-info">
+        <div class="prod-col-lbl">FECHA</div>
+        <div class="prod-col-val" style="color:var(--naranja);font-weight:700">${fmtFecha(v.fecha)}</div>
+      </div>
+      <div class="prod-col prod-col-productos">
+        <div class="prod-col-lbl">PRODUCTOS</div>
+        <div class="prod-col-val" style="font-size:.85rem;line-height:1.35">${productosTxt}</div>
+        <div class="prod-cat-tag">(${catTxt})</div>
+      </div>
+      <div class="prod-col prod-col-info">
+        <div class="prod-col-lbl">PRIORIDAD</div>
+        <button class="prod-prio-btn" style="color:${prioCfg.color}" onclick="__prodCambiarPrio('${v.id}')">${prioCfg.label}</button>
+      </div>
+      <div class="prod-col prod-col-timeline">${pasosHtml}</div>
+      <div class="prod-col prod-col-anillo">
         <div class="prod-progreso-circular" style="--pct:${prog.pct}">
           <div class="prod-pct">${prog.pct}%</div>
         </div>
         <div class="prod-progreso-txt">${prog.marcados}/${prog.total}</div>
       </div>
     </div>
-    <div class="prod-body">${secHtml}</div>
   </div>`;
 }
 
 window.__prodFiltro = (f)=>{ prodFiltro = f; renderProd(); };
 
-/* Marca/desmarca un paso, guarda en Firestore, y si TODOS los pasos quedaron marcados
-   (incluyendo "Completado"), marca el pedido como completado en el sistema Pedidos también. */
-window.__prodToggle = async (id, key, checked)=>{
+/* Cicla prioridad: baja → media → alta → baja … */
+window.__prodCambiarPrio = async (id)=>{
+  const v = ventas.find(x=>x.id===id); if(!v) return;
+  const actual = prodPrioridad(v);
+  const siguiente = actual==="baja" ? "media" : actual==="media" ? "alta" : "baja";
+  await updateDoc(doc(db,"ventas",id), {prioridad: siguiente});
+};
+
+/* Marca/desmarca un paso, guarda en Firestore, y si TODOS los pasos quedaron marcados,
+   mueve el pedido a "completado" automáticamente. */
+window.__prodToggle = async (id, paso, checked)=>{
   const v = ventas.find(x=>x.id===id); if(!v) return;
   const marcados = {...(v.prodChecks||{})};
-  if(checked) marcados[key] = true; else delete marcados[key];
+  if(checked) marcados[paso] = true; else delete marcados[paso];
 
-  // Animar el paso localmente antes de esperar a Firestore
-  const cardEl = document.getElementById(`prod-${id}`);
-  if(cardEl){
-    const label = cardEl.querySelector(`input[onchange*="${key.replace(/\\'/g,"\\\\'").replace(/'/g,"\\'")}"]`);
-    if(label){
-      const paso = label.closest(".prod-paso");
-      if(paso){
-        paso.classList.toggle("done", checked);
-        if(checked) paso.classList.add("celebrando");
-        setTimeout(()=>paso.classList.remove("celebrando"), 500);
-      }
-    }
-  }
-
-  // Chequear si con este toggle quedaron todos los pasos marcados
-  const flat = prodPasosAplanados(v);
-  const totalMarcados = flat.filter(f => marcados[f.key]===true).length;
-  const todosCompletos = totalMarcados === flat.length && flat.length > 0;
+  // Chequear si TODOS los pasos del workflow quedaron marcados
+  const pasos = prodPasosDe(v);
+  const todosCompletos = pasos.every(p => marcados[p]===true) && pasos.length>0;
 
   const updates = {prodChecks: marcados};
-  // Si todos los pasos quedan marcados, mover el pedido a "completado" automáticamente
   if(todosCompletos && v.estadoProd!=="completado"){
     let horas = null;
     const inicioStr = v.inicioProd || v.fecha;
@@ -2226,16 +2278,12 @@ window.__prodToggle = async (id, key, checked)=>{
     updates.horasProduccion = horas;
     setTimeout(()=>toast(`🎉 ¡${v.folio} completado!`), 200);
   }
-  // Si estaba completado y ahora se desmarcó algo, reabrirlo
   if(!todosCompletos && v.estadoProd==="completado"){
     updates.estadoProd = "activo";
     updates.fechaCompletado = null;
     updates.horasProduccion = null;
   }
-
   await updateDoc(doc(db,"ventas",id), updates);
-  // La UI se refrescará automáticamente por el listener de Firestore (wire),
-  // pero como el listener puede tardar unos ms, ya animamos localmente arriba.
 };
 
 const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,pedidos:renderPedidos,ingegr:renderIngEgr,productos:renderProductos,materia:renderMateria,vip:renderVIP,prod:renderProd};
