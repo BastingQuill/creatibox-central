@@ -51,6 +51,8 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 
 /* Main */
 .main{flex:1;margin-left:240px;padding:26px 30px 40px;max-width:1180px;min-width:0}
+/* PROD ocupa TODO el ancho disponible — es una tabla de gestión, necesita el espacio */
+body.vista-prod .main{max-width:none}
 .matriz-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .matriz-scroll table{min-width:560px}
 .topbar-desk{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
@@ -231,9 +233,8 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .prod-col-lbl{
   font-size:.62rem;font-weight:800;color:var(--gris-claro);
   text-transform:uppercase;letter-spacing:.06em;
-  height:32px;line-height:16px;                 /* altura fija (2 líneas) — todas las labels alineadas */
+  height:16px;line-height:16px;
   margin-bottom:6px;
-  display:flex;align-items:flex-start;
   white-space:nowrap;
 }
 .prod-col-val{font-size:.9rem;color:var(--tinta);min-height:22px;display:flex;align-items:center}
@@ -253,20 +254,36 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .prod-prio-select:hover{border-color:var(--linea);background-color:var(--blanco)}
 .prod-prio-select:focus{border-color:currentColor;outline:none}
 
-/* Timeline horizontal — cada paso toma el ancho que necesita su label completo (no se corta) */
-.prod-timeline{display:flex;align-items:flex-start;justify-content:space-between;gap:0;padding:0;min-width:0;overflow-x:auto}
-.prod-paso-wrap{display:flex;flex-direction:column;align-items:center;flex:1 1 auto;min-width:60px}
-.prod-paso-lbl{
-  font-size:.58rem;font-weight:800;color:var(--gris-claro);
-  text-transform:uppercase;letter-spacing:.04em;text-align:center;
-  height:32px;line-height:16px;                 /* 2 líneas máximo, alineado con las otras labels */
-  margin-bottom:6px;
-  padding:0 6px;
-  white-space:nowrap;
-  display:flex;align-items:flex-start;justify-content:center;
+/* Timeline horizontal — nuevo enfoque limpio:
+   Los círculos y conectores viven en una fila horizontal simple donde el conector es flex:1.
+   Las LABELS están posicionadas absolutas centradas sobre cada círculo — así pueden sobresalir
+   hacia los lados sin empujar el layout ni empalmarse con vecinas (usan pointer-events:none). */
+.prod-timeline{
+  display:flex;align-items:center;
+  gap:0;padding:22px 4px 0 4px;                /* padding-top = label(16)+gap(6) para alinear círculos con valores de metadata */
+  min-width:0;width:100%;
+  position:relative;
 }
-.prod-paso-fila{display:flex;align-items:flex-start;width:100%;position:relative}
-.prod-circ-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;position:relative}
+.prod-paso-wrap{
+  display:flex;align-items:center;
+  flex:1 1 0;min-width:0;
+  position:relative;
+}
+.prod-paso-wrap:last-child{flex:0 0 auto}      /* el último no necesita conector, no crece */
+
+.prod-paso-lbl{
+  position:absolute;
+  bottom:calc(100% + 4px);                     /* justo arriba del círculo con 4px de aire */
+  left:14px;                                    /* centrado sobre el círculo (círculo=28px, offset a su centro=14) */
+  transform:translateX(-50%);
+  font-size:.62rem;font-weight:800;color:var(--gris-claro);
+  text-transform:uppercase;letter-spacing:.04em;text-align:center;
+  white-space:nowrap;
+  pointer-events:none;                          /* labels no bloquean clicks a labels vecinas superpuestas */
+  line-height:16px;
+}
+.prod-paso-fila{display:flex;align-items:center;width:100%;position:relative}
+.prod-circ-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;position:relative;z-index:1}
 
 /* Círculo del paso — 3 estados: pendiente, actual, done */
 .prod-paso-circ{
@@ -293,7 +310,7 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 }
 
 /* Anillo circular de progreso (a la derecha) */
-.prod-col-anillo{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;margin-top:38px}
+.prod-col-anillo{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;margin-top:22px}
 .prod-progreso-circular{
   width:52px;height:52px;border-radius:50%;
   background: conic-gradient(var(--violeta) calc(var(--pct)*1%), var(--linea) 0);
@@ -2402,6 +2419,7 @@ const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,pedidos:renderPedido
 function irVista(v,_desdeHistorial){
   vistaActual=v;
   Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={};
+  document.body.classList.toggle("vista-prod", v==="prod");
   document.querySelectorAll(".nav-item[data-vista]").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
   document.querySelectorAll(".botnav .b[data-vista]").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
   const esMas=["productos","materia","vip","prod"].includes(v);
