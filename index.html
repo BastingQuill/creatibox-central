@@ -221,8 +221,8 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 }
 .prod-card-grid{
   display:grid;
-  grid-template-columns: 65px 105px 75px minmax(160px,220px) 90px 1fr 65px;
-  gap:14px;
+  grid-template-columns: 60px 100px 70px minmax(140px,180px) 85px 1fr 60px;
+  gap:12px;
   align-items:start;
   min-width:0;
 }
@@ -231,8 +231,9 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .prod-col-lbl{
   font-size:.62rem;font-weight:800;color:var(--gris-claro);
   text-transform:uppercase;letter-spacing:.06em;
-  height:16px;line-height:16px;                 /* altura fija — todas las labels alineadas */
+  height:32px;line-height:16px;                 /* altura fija (2 líneas) — todas las labels alineadas */
   margin-bottom:6px;
+  display:flex;align-items:flex-start;
   white-space:nowrap;
 }
 .prod-col-val{font-size:.9rem;color:var(--tinta);min-height:22px;display:flex;align-items:center}
@@ -246,7 +247,7 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   appearance:none;-webkit-appearance:none;
   background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3e%3cpath d='M3 5L6 8L9 5' stroke='%236B7280' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
   background-repeat:no-repeat;background-position:right 6px center;
-  background-size:10px 10px;                     /* punto 1: flecha chica */
+  background-size:10px 10px;
   height:26px;
 }
 .prod-prio-select:hover{border-color:var(--linea);background-color:var(--blanco)}
@@ -256,13 +257,15 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .prod-timeline{display:flex;align-items:flex-start;justify-content:stretch;gap:0;padding:0;min-width:0}
 .prod-paso-wrap{display:flex;flex-direction:column;align-items:center;flex:1 1 0;min-width:0}
 .prod-paso-lbl{
-  font-size:.58rem;font-weight:800;color:var(--gris-claro);
-  text-transform:uppercase;letter-spacing:.04em;text-align:center;
-  height:16px;line-height:16px;                  /* alineado con las otras labels */
+  font-size:.56rem;font-weight:800;color:var(--gris-claro);
+  text-transform:uppercase;letter-spacing:.03em;text-align:center;
+  height:32px;line-height:1.25;                 /* 2 líneas, alineado con las otras labels */
   margin-bottom:6px;
   padding:0 2px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  overflow:hidden;
   width:100%;
+  display:flex;align-items:flex-start;justify-content:center;
+  word-break:break-word;
 }
 .prod-paso-fila{display:flex;align-items:flex-start;width:100%;position:relative}
 .prod-circ-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;position:relative}
@@ -297,7 +300,7 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 }
 
 /* Anillo circular de progreso (a la derecha) */
-.prod-col-anillo{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;margin-top:22px}
+.prod-col-anillo{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;margin-top:38px}
 .prod-progreso-circular{
   width:52px;height:52px;border-radius:50%;
   background: conic-gradient(var(--violeta) calc(var(--pct)*1%), var(--linea) 0);
