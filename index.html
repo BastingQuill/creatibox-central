@@ -219,58 +219,85 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
   box-shadow: 0 0 0 3px rgba(124,58,237,.25), var(--sombra);
   transition: box-shadow .3s;
 }
-.prod-card-grid{display:grid;grid-template-columns:70px 110px 80px minmax(180px,1fr) 85px minmax(400px,2fr) 70px;gap:14px;align-items:center}
+.prod-card-grid{
+  display:grid;
+  grid-template-columns: 65px 105px 75px minmax(160px,220px) 90px 1fr 65px;
+  gap:14px;
+  align-items:start;
+  min-width:0;
+}
 
-.prod-col-lbl{font-size:.65rem;font-weight:800;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
-.prod-col-val{font-size:.9rem;color:var(--tinta)}
+.prod-col{display:flex;flex-direction:column;min-width:0}
+.prod-col-lbl{
+  font-size:.62rem;font-weight:800;color:var(--gris-claro);
+  text-transform:uppercase;letter-spacing:.06em;
+  height:16px;line-height:16px;                 /* altura fija — todas las labels alineadas */
+  margin-bottom:6px;
+  white-space:nowrap;
+}
+.prod-col-val{font-size:.9rem;color:var(--tinta);min-height:22px;display:flex;align-items:center}
+.prod-col-productos .prod-col-val{align-items:flex-start;line-height:1.35}
 
 /* Selector de prioridad — dropdown personalizado bonito */
 .prod-prio-select{
-  font-size:.9rem;font-weight:800;padding:6px 26px 6px 10px;border-radius:8px;
+  font-size:.9rem;font-weight:800;padding:4px 22px 4px 8px;border-radius:8px;
   border:1.5px solid transparent;background:var(--fondo);
   cursor:pointer;transition:all .15s;
   appearance:none;-webkit-appearance:none;
-  background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3e%3cpath d='M3 4.5L6 7.5L9 4.5' stroke='%236B7280' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
-  background-repeat:no-repeat;background-position:right 8px center;
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3e%3cpath d='M3 5L6 8L9 5' stroke='%236B7280' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat:no-repeat;background-position:right 6px center;
+  background-size:10px 10px;                     /* punto 1: flecha chica */
+  height:26px;
 }
 .prod-prio-select:hover{border-color:var(--linea);background-color:var(--blanco)}
 .prod-prio-select:focus{border-color:currentColor;outline:none}
 
-/* Timeline horizontal de pasos */
-.prod-timeline{display:flex;align-items:flex-start;justify-content:flex-start;gap:0;overflow-x:auto;padding:4px 2px}
-.prod-paso-wrap{display:flex;flex-direction:column;align-items:center;flex:1;min-width:78px}
-.prod-paso-lbl{font-size:.6rem;font-weight:800;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin-bottom:6px;height:28px;display:flex;align-items:flex-start;justify-content:center;line-height:1.15;padding:0 2px}
+/* Timeline horizontal — sin scroll: los pasos se acomodan al ancho disponible con placeholders para los no-aplicables */
+.prod-timeline{display:flex;align-items:flex-start;justify-content:stretch;gap:0;padding:0;min-width:0}
+.prod-paso-wrap{display:flex;flex-direction:column;align-items:center;flex:1 1 0;min-width:0}
+.prod-paso-lbl{
+  font-size:.58rem;font-weight:800;color:var(--gris-claro);
+  text-transform:uppercase;letter-spacing:.04em;text-align:center;
+  height:16px;line-height:16px;                  /* alineado con las otras labels */
+  margin-bottom:6px;
+  padding:0 2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  width:100%;
+}
 .prod-paso-fila{display:flex;align-items:flex-start;width:100%;position:relative}
-/* Columna vertical que agrupa el círculo y su flecha, así la flecha se centra bajo el círculo */
 .prod-circ-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;position:relative}
 
 /* Círculo del paso — 3 estados: pendiente, actual, done */
 .prod-paso-circ{
-  width:32px;height:32px;border-radius:50%;
+  width:28px;height:28px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:.82rem;font-weight:800;
+  font-size:.75rem;font-weight:800;
   border:2px solid var(--linea);background:var(--blanco);color:var(--gris-claro);
   flex-shrink:0;transition:all .2s cubic-bezier(.4,0,.2,1);cursor:pointer;
 }
 .prod-paso-circ:hover{transform:scale(1.08);border-color:var(--violeta)}
-.prod-paso-circ.pendiente{}
 .prod-paso-circ.actual{border-color:var(--violeta);color:var(--violeta);border-width:2.5px}
 .prod-paso-circ.done{background:var(--verde);border-color:var(--verde);color:#fff}
-.prod-paso-circ .check{font-size:.95rem;font-weight:900}
+.prod-paso-circ .check{font-size:.85rem;font-weight:900}
 
-/* Conector (línea) entre pasos — sits at circle's vertical center (circle=32px, so 16px minus 1.5px half of line) */
-.prod-conector{flex:1;height:3px;background:var(--linea);transition:background .3s;margin-top:14.5px}
+/* Placeholder de paso no-aplicable — invisible pero mantiene el espacio */
+.prod-paso-invisible{visibility:hidden;pointer-events:none;cursor:default}
+.prod-paso-invisible:hover{transform:none}
+.prod-conector-vacio{flex:1;height:3px;margin-top:12.5px}
+
+/* Conector (línea) entre pasos — al centro vertical del círculo (28/2 - 1.5 ≈ 12.5px) */
+.prod-conector{flex:1;height:3px;background:var(--linea);transition:background .3s;margin-top:12.5px}
 .prod-conector.done{background:var(--verde)}
 
-/* Flecha ↑ debajo del círculo actual — dentro de la columna, ya queda centrada */
-.prod-flecha{font-size:1rem;color:var(--violeta);font-weight:800;line-height:1;animation:prod-bounce 1.5s ease-in-out infinite}
+/* Flecha ↑ debajo del círculo actual */
+.prod-flecha{font-size:.95rem;color:var(--violeta);font-weight:800;line-height:1;animation:prod-bounce 1.5s ease-in-out infinite}
 @keyframes prod-bounce{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-3px)}
 }
 
 /* Anillo circular de progreso (a la derecha) */
-.prod-col-anillo{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.prod-col-anillo{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;margin-top:22px}
 .prod-progreso-circular{
   width:52px;height:52px;border-radius:50%;
   background: conic-gradient(var(--violeta) calc(var(--pct)*1%), var(--linea) 0);
@@ -2181,8 +2208,8 @@ function renderProd(){
   if(prodFiltro==="activos"){
     const prioRank = {alta:0, media:1, baja:2};
     lista.sort((a,b)=>{
-      const pa = prioRank[prodPrioridad(a)]||3;
-      const pb = prioRank[prodPrioridad(b)]||3;
+      const pa = prioRank[prodPrioridad(a)] ?? 3;
+      const pb = prioRank[prodPrioridad(b)] ?? 3;
       if(pa!==pb) return pa-pb;
       return prodProgreso(a).pct - prodProgreso(b).pct;
     });
@@ -2220,17 +2247,40 @@ function renderProdCard(v){
   const prio = prodPrioridad(v);
   const prioCfg = PROD_PRIO_CONFIG[prio];
 
-  // Pasos como línea horizontal
+  // Pasos como línea horizontal — todos los pedidos usan la MISMA cantidad de columnas
+  // (el orden global entero), rellenando con placeholders invisibles los pasos que no aplican.
+  // Así todos los timelines quedan perfectamente alineados horizontalmente, sin importar el workflow.
+  const pasosDelPedido = new Set(pasos);
   let pasosHtml = `<div class="prod-timeline">`;
-  pasos.forEach((paso, i)=>{
+  // Indice visible dentro de los pasos que SÍ aplican (para numeración correcta)
+  let visIdx = 0;
+  PROD_ORDEN_GLOBAL.forEach((paso, gi)=>{
+    const aplica = pasosDelPedido.has(paso);
+    if(!aplica){
+      // Placeholder invisible — mantiene el ancho de columna igual
+      pasosHtml += `<div class="prod-paso-wrap prod-paso-vacio">
+        <div class="prod-paso-lbl">&nbsp;</div>
+        <div class="prod-paso-fila">
+          <div class="prod-circ-col"><div class="prod-paso-circ prod-paso-invisible"></div></div>
+        </div>
+      </div>`;
+      return;
+    }
     const checked = marcados[paso]===true;
-    const esActual = !checked && i===prog.idxActual;
+    const esActual = !checked && visIdx===prog.idxActual;
+    visIdx++;
+    const num = visIdx;
     let claseCirc = "pendiente";
-    let contenido = `<span class="num">${i+1}</span>`;
+    let contenido = `<span class="num">${num}</span>`;
     if(checked){ claseCirc = "done"; contenido = `<span class="check">✓</span>`; }
     else if(esActual){ claseCirc = "actual"; }
 
-    const conector = i<pasos.length-1 ? `<div class="prod-conector ${checked?'done':''}"></div>` : '';
+    // Conector: encuentra el siguiente paso que SÍ aplica (para dibujar la línea correcta)
+    let hayConector = false;
+    for(let j=gi+1; j<PROD_ORDEN_GLOBAL.length; j++){
+      if(pasosDelPedido.has(PROD_ORDEN_GLOBAL[j])){ hayConector = true; break; }
+    }
+    const conector = hayConector ? `<div class="prod-conector ${checked?'done':''}"></div>` : `<div class="prod-conector-vacio"></div>`;
 
     pasosHtml += `<div class="prod-paso-wrap">
       <div class="prod-paso-lbl">${paso.toUpperCase()}</div>
