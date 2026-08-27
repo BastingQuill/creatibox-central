@@ -253,19 +253,17 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .prod-prio-select:hover{border-color:var(--linea);background-color:var(--blanco)}
 .prod-prio-select:focus{border-color:currentColor;outline:none}
 
-/* Timeline horizontal — sin scroll: los pasos se acomodan al ancho disponible con placeholders para los no-aplicables */
-.prod-timeline{display:flex;align-items:flex-start;justify-content:stretch;gap:0;padding:0;min-width:0}
-.prod-paso-wrap{display:flex;flex-direction:column;align-items:center;flex:1 1 0;min-width:0}
+/* Timeline horizontal — cada paso toma el ancho que necesita su label completo (no se corta) */
+.prod-timeline{display:flex;align-items:flex-start;justify-content:space-between;gap:0;padding:0;min-width:0;overflow-x:auto}
+.prod-paso-wrap{display:flex;flex-direction:column;align-items:center;flex:1 1 auto;min-width:60px}
 .prod-paso-lbl{
-  font-size:.56rem;font-weight:800;color:var(--gris-claro);
-  text-transform:uppercase;letter-spacing:.03em;text-align:center;
-  height:32px;line-height:1.25;                 /* 2 líneas, alineado con las otras labels */
+  font-size:.58rem;font-weight:800;color:var(--gris-claro);
+  text-transform:uppercase;letter-spacing:.04em;text-align:center;
+  height:32px;line-height:16px;                 /* 2 líneas máximo, alineado con las otras labels */
   margin-bottom:6px;
-  padding:0 2px;
-  overflow:hidden;
-  width:100%;
+  padding:0 6px;
+  white-space:nowrap;
   display:flex;align-items:flex-start;justify-content:center;
-  word-break:break-word;
 }
 .prod-paso-fila{display:flex;align-items:flex-start;width:100%;position:relative}
 .prod-circ-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;position:relative}
@@ -283,13 +281,8 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .prod-paso-circ.done{background:var(--verde);border-color:var(--verde);color:#fff}
 .prod-paso-circ .check{font-size:.85rem;font-weight:900}
 
-/* Placeholder de paso no-aplicable — invisible pero mantiene el espacio */
-.prod-paso-invisible{visibility:hidden;pointer-events:none;cursor:default}
-.prod-paso-invisible:hover{transform:none}
-.prod-conector-vacio{flex:1;height:3px;margin-top:12.5px}
-
 /* Conector (línea) entre pasos — al centro vertical del círculo (28/2 - 1.5 ≈ 12.5px) */
-.prod-conector{flex:1;height:3px;background:var(--linea);transition:background .3s;margin-top:12.5px}
+.prod-conector{flex:1;height:3px;background:var(--linea);transition:background .3s;margin-top:12.5px;min-width:20px}
 .prod-conector.done{background:var(--verde)}
 
 /* Flecha ↑ debajo del círculo actual */
@@ -2250,40 +2243,18 @@ function renderProdCard(v){
   const prio = prodPrioridad(v);
   const prioCfg = PROD_PRIO_CONFIG[prio];
 
-  // Pasos como línea horizontal — todos los pedidos usan la MISMA cantidad de columnas
-  // (el orden global entero), rellenando con placeholders invisibles los pasos que no aplican.
-  // Así todos los timelines quedan perfectamente alineados horizontalmente, sin importar el workflow.
-  const pasosDelPedido = new Set(pasos);
+  // Pasos como línea horizontal — solo los que aplican al pedido.
+  // Cada paso toma el ancho natural que necesite su label completo (no se corta).
   let pasosHtml = `<div class="prod-timeline">`;
-  // Indice visible dentro de los pasos que SÍ aplican (para numeración correcta)
-  let visIdx = 0;
-  PROD_ORDEN_GLOBAL.forEach((paso, gi)=>{
-    const aplica = pasosDelPedido.has(paso);
-    if(!aplica){
-      // Placeholder invisible — mantiene el ancho de columna igual
-      pasosHtml += `<div class="prod-paso-wrap prod-paso-vacio">
-        <div class="prod-paso-lbl">&nbsp;</div>
-        <div class="prod-paso-fila">
-          <div class="prod-circ-col"><div class="prod-paso-circ prod-paso-invisible"></div></div>
-        </div>
-      </div>`;
-      return;
-    }
+  pasos.forEach((paso, i)=>{
     const checked = marcados[paso]===true;
-    const esActual = !checked && visIdx===prog.idxActual;
-    visIdx++;
-    const num = visIdx;
+    const esActual = !checked && i===prog.idxActual;
     let claseCirc = "pendiente";
-    let contenido = `<span class="num">${num}</span>`;
+    let contenido = `<span class="num">${i+1}</span>`;
     if(checked){ claseCirc = "done"; contenido = `<span class="check">✓</span>`; }
     else if(esActual){ claseCirc = "actual"; }
 
-    // Conector: encuentra el siguiente paso que SÍ aplica (para dibujar la línea correcta)
-    let hayConector = false;
-    for(let j=gi+1; j<PROD_ORDEN_GLOBAL.length; j++){
-      if(pasosDelPedido.has(PROD_ORDEN_GLOBAL[j])){ hayConector = true; break; }
-    }
-    const conector = hayConector ? `<div class="prod-conector ${checked?'done':''}"></div>` : `<div class="prod-conector-vacio"></div>`;
+    const conector = i<pasos.length-1 ? `<div class="prod-conector ${checked?'done':''}"></div>` : '';
 
     pasosHtml += `<div class="prod-paso-wrap">
       <div class="prod-paso-lbl">${paso.toUpperCase()}</div>
