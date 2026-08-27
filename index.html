@@ -215,21 +215,34 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .prod-lista{display:flex;flex-direction:column;gap:12px}
 .prod-card{background:var(--blanco);border-radius:14px;padding:18px 20px;box-shadow:var(--sombra);border:1.5px solid var(--linea);transition:all .2s}
 .prod-card.terminado{border-color:var(--verde);opacity:.75}
+.prod-card.prod-highlight{
+  box-shadow: 0 0 0 3px rgba(124,58,237,.25), var(--sombra);
+  transition: box-shadow .3s;
+}
 .prod-card-grid{display:grid;grid-template-columns:70px 110px 80px minmax(180px,1fr) 85px minmax(400px,2fr) 70px;gap:14px;align-items:center}
 
 .prod-col-lbl{font-size:.65rem;font-weight:800;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
 .prod-col-val{font-size:.9rem;color:var(--tinta)}
-.prod-cat-tag{font-size:.7rem;color:var(--violeta);font-weight:700;text-align:center;margin-top:6px}
 
-/* Botón prioridad — texto en color según nivel, se cicla al tocar */
-.prod-prio-btn{font-size:.9rem;font-weight:800;padding:6px 10px;border-radius:8px;transition:background .15s}
-.prod-prio-btn:hover{background:var(--fondo)}
+/* Selector de prioridad — dropdown personalizado bonito */
+.prod-prio-select{
+  font-size:.9rem;font-weight:800;padding:6px 26px 6px 10px;border-radius:8px;
+  border:1.5px solid transparent;background:var(--fondo);
+  cursor:pointer;transition:all .15s;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3e%3cpath d='M3 4.5L6 7.5L9 4.5' stroke='%236B7280' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat:no-repeat;background-position:right 8px center;
+}
+.prod-prio-select:hover{border-color:var(--linea);background-color:var(--blanco)}
+.prod-prio-select:focus{border-color:currentColor;outline:none}
 
 /* Timeline horizontal de pasos */
 .prod-timeline{display:flex;align-items:flex-start;justify-content:flex-start;gap:0;overflow-x:auto;padding:4px 2px}
 .prod-paso-wrap{display:flex;flex-direction:column;align-items:center;flex:1;min-width:78px}
 .prod-paso-lbl{font-size:.6rem;font-weight:800;color:var(--gris-claro);text-transform:uppercase;letter-spacing:.04em;text-align:center;margin-bottom:6px;height:28px;display:flex;align-items:flex-start;justify-content:center;line-height:1.15;padding:0 2px}
-.prod-paso-fila{display:flex;align-items:center;width:100%;position:relative}
+.prod-paso-fila{display:flex;align-items:flex-start;width:100%;position:relative}
+/* Columna vertical que agrupa el círculo y su flecha, así la flecha se centra bajo el círculo */
+.prod-circ-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;position:relative}
 
 /* Círculo del paso — 3 estados: pendiente, actual, done */
 .prod-paso-circ{
@@ -245,13 +258,12 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .prod-paso-circ.done{background:var(--verde);border-color:var(--verde);color:#fff}
 .prod-paso-circ .check{font-size:.95rem;font-weight:900}
 
-/* Conector (línea) entre pasos */
-.prod-conector{flex:1;height:3px;background:var(--linea);transition:background .3s}
+/* Conector (línea) entre pasos — sits at circle's vertical center (circle=32px, so 16px minus 1.5px half of line) */
+.prod-conector{flex:1;height:3px;background:var(--linea);transition:background .3s;margin-top:14.5px}
 .prod-conector.done{background:var(--verde)}
 
-/* Flecha ↑ debajo del paso actual */
-.prod-flecha{font-size:1rem;color:var(--gris-claro);font-weight:800;margin-top:4px;animation:prod-bounce 1.5s ease-in-out infinite}
-.prod-flecha-holder{height:20px;margin-top:4px}
+/* Flecha ↑ debajo del círculo actual — dentro de la columna, ya queda centrada */
+.prod-flecha{font-size:1rem;color:var(--violeta);font-weight:800;line-height:1;animation:prod-bounce 1.5s ease-in-out infinite}
 @keyframes prod-bounce{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-3px)}
@@ -1400,6 +1412,13 @@ window.__borrarAbono=async(id,i)=>{
 };
 window.__borrarPedido=async(id)=>{ if(confirm("¿Eliminar este pedido?")){ await deleteDoc(doc(db,"ventas",id)); cerrarModal(); toast("Pedido eliminado"); } };
 window.__editarPedido=(id)=>{ const v=ventas.find(x=>x.id===id);
+  const catsOverride = v.categoriaOverride || [];
+  const catOpts = [
+    ["estampado_multicolor","🎨 Estampado"],
+    ["bordado","🧵 Bordado"],
+    ["sticker_plantilla","🏷️ Stickers"],
+    ["otros","🎁 Otros"]
+  ];
   abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Editar pedido</h2><div class="msub">Puedes corregir cualquier dato del pedido</div>
     <label>Folio</label><input id="ePFolio" value="${(v.folio||'').replace(/"/g,'&quot;')}">
     <label>Fecha</label><input type="date" id="ePFecha" value="${v.fecha||hoy()}">
@@ -1408,21 +1427,38 @@ window.__editarPedido=(id)=>{ const v=ventas.find(x=>x.id===id);
     <label>Detalles adicionales</label><textarea id="ePDet" rows="2">${v.detalles||''}</textarea>
     <label>Precio total del pedido ($)</label><input type="number" id="ePTotal" value="${v.total||0}">
     <label>Referido por (opcional)</label><input id="ePRef" value="${(v.referido||'').replace(/"/g,'&quot;')}">
+    <label>Categorías (para el workflow de PROD)</label>
+    <div style="font-size:.75rem;color:var(--gris);margin-bottom:8px">Selecciona una o más. Útil para pedidos viejos que salen como "Otros" en PROD.</div>
+    <div class="chip-group" style="margin-bottom:14px">
+      ${catOpts.map(([id,label])=>`<button type="button" class="chip ${catsOverride.includes(id)?'sel':''}" onclick="__toggleCatOverride('${id}',this)">${label}</button>`).join("")}
+    </div>
     <label>Estado de producción</label><select id="ePEstado">
       <option value="activo" ${(v.estadoProd||'activo')==='activo'?'selected':''}>En producción</option>
       <option value="completado" ${v.estadoProd==='completado'?'selected':''}>Completado</option>
     </select>
     <div style="margin-top:18px"><button class="btn btn-primary btn-block" onclick="__guardarEdicionPedido('${id}')">Guardar cambios</button></div>`);
+  // Buffer local para los chips
+  window.__catOverrideBuffer = [...catsOverride];
+};
+window.__toggleCatOverride=(cat,btn)=>{
+  const buf = window.__catOverrideBuffer || [];
+  const idx = buf.indexOf(cat);
+  if(idx>=0){ buf.splice(idx,1); btn.classList.remove("sel"); }
+  else { buf.push(cat); btn.classList.add("sel"); }
+  window.__catOverrideBuffer = buf;
 };
 window.__guardarEdicionPedido=async(id)=>{
   const cliente=$("ePCliente").value.trim();
   if(!cliente){ toast("Ponle nombre al cliente"); return; }
+  const catOverride = window.__catOverrideBuffer || [];
   await updateDoc(doc(db,"ventas",id),{
     folio:$("ePFolio").value.trim(), fecha:$("ePFecha").value, cliente,
     productos:$("ePProd").value.trim(), detalles:$("ePDet").value.trim(),
     total:parseFloat($("ePTotal").value)||0, referido:$("ePRef").value.trim()||null,
-    estadoProd:$("ePEstado").value
+    estadoProd:$("ePEstado").value,
+    categoriaOverride: catOverride.length ? catOverride : null
   });
+  window.__catOverrideBuffer = null;
   toast("Cambios guardados ✓"); __verPedido(id);
 };
 window.__cerrar=cerrarModal;
@@ -2070,8 +2106,13 @@ const PROD_SERVICIO_A_CAT = {
   personalizado: null
 };
 
-/* Detecta las categorías presentes en el pedido, sin duplicados. */
+/* Detecta las categorías presentes en el pedido, sin duplicados.
+   Si el pedido tiene categoriaOverride (asignada manualmente desde Editar pedido),
+   se usa ese array — útil para pedidos viejos sin items detectables. */
 function prodCategoriasDePedido(v){
+  if(Array.isArray(v.categoriaOverride) && v.categoriaOverride.length){
+    return v.categoriaOverride;
+  }
   const cats = [];
   (v.items||[]).forEach(it=>{
     let cat = PROD_SERVICIO_A_CAT[it.servicio];
@@ -2179,10 +2220,6 @@ function renderProdCard(v){
   const prio = prodPrioridad(v);
   const prioCfg = PROD_PRIO_CONFIG[prio];
 
-  // Categorías detectadas → texto legible bajo productos
-  const cats = prodCategoriasDePedido(v);
-  const catTxt = cats.map(c=>PROD_CAT_ETIQUETA[c]||c.toUpperCase()).join(" · ");
-
   // Pasos como línea horizontal
   let pasosHtml = `<div class="prod-timeline">`;
   pasos.forEach((paso, i)=>{
@@ -2193,16 +2230,17 @@ function renderProdCard(v){
     if(checked){ claseCirc = "done"; contenido = `<span class="check">✓</span>`; }
     else if(esActual){ claseCirc = "actual"; }
 
-    // La línea a la derecha de cada paso (menos el último): verde si el paso está done
     const conector = i<pasos.length-1 ? `<div class="prod-conector ${checked?'done':''}"></div>` : '';
 
     pasosHtml += `<div class="prod-paso-wrap">
       <div class="prod-paso-lbl">${paso.toUpperCase()}</div>
       <div class="prod-paso-fila">
-        <button class="prod-paso-circ ${claseCirc}" onclick="__prodToggle('${v.id}','${paso.replace(/'/g,"\\'")}',${!checked})" title="${checked?'Marcar como pendiente':'Marcar como completado'}">${contenido}</button>
+        <div class="prod-circ-col">
+          <button class="prod-paso-circ ${claseCirc}" onclick="__prodToggle('${v.id}','${paso.replace(/'/g,"\\'")}',${!checked})" title="${checked?'Marcar como pendiente':'Marcar como completado'}">${contenido}</button>
+          ${esActual?'<div class="prod-flecha">↑</div>':''}
+        </div>
         ${conector}
       </div>
-      ${esActual?'<div class="prod-flecha">↑</div>':'<div class="prod-flecha-holder"></div>'}
     </div>`;
   });
   pasosHtml += `</div>`;
@@ -2226,11 +2264,14 @@ function renderProdCard(v){
       <div class="prod-col prod-col-productos">
         <div class="prod-col-lbl">PRODUCTOS</div>
         <div class="prod-col-val" style="font-size:.85rem;line-height:1.35">${productosTxt}</div>
-        <div class="prod-cat-tag">(${catTxt})</div>
       </div>
       <div class="prod-col prod-col-info">
         <div class="prod-col-lbl">PRIORIDAD</div>
-        <button class="prod-prio-btn" style="color:${prioCfg.color}" onclick="__prodCambiarPrio('${v.id}')">${prioCfg.label}</button>
+        <select class="prod-prio-select" style="color:${prioCfg.color}" onchange="__prodCambiarPrio('${v.id}',this.value)">
+          <option value="baja" ${prio==='baja'?'selected':''}>BAJA</option>
+          <option value="media" ${prio==='media'?'selected':''}>MEDIA</option>
+          <option value="alta" ${prio==='alta'?'selected':''}>ALTA</option>
+        </select>
       </div>
       <div class="prod-col prod-col-timeline">${pasosHtml}</div>
       <div class="prod-col prod-col-anillo">
@@ -2245,12 +2286,58 @@ function renderProdCard(v){
 
 window.__prodFiltro = (f)=>{ prodFiltro = f; renderProd(); };
 
-/* Cicla prioridad: baja → media → alta → baja … */
-window.__prodCambiarPrio = async (id)=>{
+/* Cambio de prioridad. Usamos técnica FLIP para animar suavemente el reordenamiento:
+   1) Guardamos las posiciones actuales de todas las tarjetas (First)
+   2) Firestore actualiza y se re-renderiza en el nuevo orden (Last)
+   3) Aplicamos un transform inverso a cada tarjeta para "borrar" el salto (Invert)
+   4) Removemos el transform con una transición para que se mueva suavemente (Play) */
+window.__prodCambiarPrio = async (id, nuevaPrio)=>{
   const v = ventas.find(x=>x.id===id); if(!v) return;
-  const actual = prodPrioridad(v);
-  const siguiente = actual==="baja" ? "media" : actual==="media" ? "alta" : "baja";
-  await updateDoc(doc(db,"ventas",id), {prioridad: siguiente});
+
+  // 1) FIRST — capturar posiciones actuales de cada tarjeta por id
+  const cards = document.querySelectorAll(".prod-card");
+  const posInicial = new Map();
+  cards.forEach(c=>{
+    if(c.id) posInicial.set(c.id, c.getBoundingClientRect());
+  });
+
+  // Actualizar Firestore. El listener re-renderiza y las tarjetas quedan en su nueva posición.
+  await updateDoc(doc(db,"ventas",id), {prioridad: nuevaPrio});
+
+  // Esperar al próximo frame para que el DOM se haya re-renderizado
+  requestAnimationFrame(()=>{
+    const nuevasCards = document.querySelectorAll(".prod-card");
+    nuevasCards.forEach(c=>{
+      const antes = posInicial.get(c.id);
+      if(!antes) return;
+      const ahora = c.getBoundingClientRect();
+      const deltaY = antes.top - ahora.top;
+      if(Math.abs(deltaY) < 2) return; // no se movió, saltar
+
+      // INVERT — mover instantáneamente a su posición vieja (sin transición)
+      c.style.transition = "none";
+      c.style.transform = `translateY(${deltaY}px)`;
+      // Forzar reflow para que el navegador registre el transform antes de animar
+      c.offsetHeight;
+
+      // PLAY — remover el transform con transición suave
+      c.style.transition = "transform .45s cubic-bezier(.4,0,.2,1)";
+      c.style.transform = "";
+
+      // Limpiar el estilo inline al terminar
+      c.addEventListener("transitionend", function h(){
+        c.style.transition = "";
+        c.removeEventListener("transitionend", h);
+      });
+    });
+
+    // Además, resaltar brevemente la tarjeta que el usuario acaba de tocar
+    const cardEditada = document.getElementById(`prod-${id}`);
+    if(cardEditada){
+      cardEditada.classList.add("prod-highlight");
+      setTimeout(()=>cardEditada.classList.remove("prod-highlight"), 1200);
+    }
+  });
 };
 
 /* Marca/desmarca un paso, guarda en Firestore, y si TODOS los pasos quedaron marcados,
