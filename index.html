@@ -211,6 +211,82 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
 .acc-productos{display:none;font-size:.78rem;color:var(--gris);font-weight:500;margin-top:6px;padding-left:17px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis}
 @media(min-width:861px){.acc-productos{display:none!important}}
 
+/* ============ PROD — Tablero de producción ============ */
+.prod-lista{display:flex;flex-direction:column;gap:16px}
+.prod-card{background:var(--blanco);border-radius:18px;padding:20px;box-shadow:var(--sombra);border:1.5px solid var(--linea);transition:all .2s}
+.prod-card.terminado{border-color:var(--verde);background:linear-gradient(180deg,rgba(16,185,129,.03),var(--blanco))}
+.prod-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px dashed var(--linea)}
+
+/* Ring de progreso circular */
+.prod-progreso{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.prod-progreso-circular{
+  width:60px;height:60px;border-radius:50%;
+  background: conic-gradient(var(--violeta) calc(var(--pct)*1%), var(--linea) 0);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.prod-progreso-circular::before{
+  content:"";position:absolute;inset:5px;border-radius:50%;background:var(--blanco);
+}
+.prod-card.terminado .prod-progreso-circular{background: conic-gradient(var(--verde) 100%, var(--linea) 0)}
+.prod-pct{position:relative;z-index:1;font-size:.82rem;font-weight:800;color:var(--tinta)}
+.prod-progreso-txt{font-size:.7rem;color:var(--gris);font-weight:600}
+
+/* Secciones del checklist (Inicio + ramas por categoría) */
+.prod-body{display:flex;flex-direction:column;gap:14px}
+.prod-seccion{background:var(--fondo);border-radius:12px;padding:12px 14px}
+.prod-seccion-titulo{font-size:.78rem;font-weight:800;color:var(--gris);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+
+/* Los pasos individuales — checkbox estilo apps modernas de to-do */
+.prod-paso{display:flex;align-items:center;gap:12px;padding:9px 4px;cursor:pointer;user-select:none;border-radius:8px;transition:background .15s}
+.prod-paso:hover{background:rgba(124,58,237,.05)}
+.prod-paso input{position:absolute;opacity:0;pointer-events:none}
+.prod-check{
+  width:22px;height:22px;border-radius:7px;
+  border:2px solid var(--linea);
+  background:var(--blanco);
+  display:flex;align-items:center;justify-content:center;
+  transition:all .18s cubic-bezier(.4,0,.2,1);
+  flex-shrink:0;
+}
+.prod-check .checkmark{
+  color:#fff;font-size:.8rem;font-weight:900;
+  opacity:0;transform:scale(0);
+  transition:all .18s cubic-bezier(.4,0,.2,1);
+}
+.prod-paso input:checked ~ .prod-check{
+  background:var(--violeta);
+  border-color:var(--violeta);
+  transform:scale(1.05);
+}
+.prod-paso input:checked ~ .prod-check .checkmark{
+  opacity:1;transform:scale(1);
+}
+.prod-paso-txt{font-size:.9rem;font-weight:600;color:var(--tinta);transition:all .18s;flex:1}
+.prod-paso.done .prod-paso-txt{color:var(--gris-claro);text-decoration:line-through;text-decoration-color:var(--gris-claro)}
+
+/* Animación de celebración cuando marcas un paso */
+@keyframes prod-pop{
+  0%{transform:scale(1)}
+  40%{transform:scale(1.15)}
+  100%{transform:scale(1.05)}
+}
+@keyframes prod-glow{
+  0%{box-shadow:0 0 0 0 rgba(124,58,237,.4)}
+  100%{box-shadow:0 0 0 12px rgba(124,58,237,0)}
+}
+.prod-paso.celebrando .prod-check{
+  animation: prod-pop .4s ease, prod-glow .5s ease-out;
+}
+
+/* Ajuste móvil: card más compacto */
+@media(max-width:860px){
+  .prod-card{padding:16px}
+  .prod-header{flex-direction:column;align-items:stretch;gap:12px}
+  .prod-progreso{flex-direction:row;align-self:flex-end;gap:8px}
+  .prod-progreso-circular{width:52px;height:52px}
+}
+
 @media(max-width:860px){
   .sidebar{display:none}
   .main{margin-left:0;padding:16px 16px 90px;max-width:100%}
@@ -325,6 +401,7 @@ label{display:block;font-size:.8rem;font-weight:600;color:var(--gris);margin:14p
     <button class="nav-item activo" data-vista="dashboard"><span class="ic">◈</span> Resumen</button>
     <button class="nav-item" data-vista="cotizar"><span class="ic">✦</span> Cotizar</button>
     <button class="nav-item" data-vista="pedidos"><span class="ic">🗂️</span> Pedidos</button>
+    <button class="nav-item" data-vista="prod"><span class="ic">🔨</span> PROD</button>
     <button class="nav-item" data-vista="ingegr"><span class="ic">💰</span> Ingresos y Egresos</button>
     <button class="nav-item" data-vista="productos"><span class="ic">📦</span> Productos</button>
     <button class="nav-item" data-vista="materia"><span class="ic">🧵</span> Materia Prima</button>
@@ -733,7 +810,7 @@ function calcularCoti(){
   let extrasUnicos = 0;
   if(coti.servicio==="bordado" && coti.extras.ponchado==='si'){ extrasUnicos += PRECIOS.ponchado; extras.push(["Ponchado (único por diseño)",PRECIOS.ponchado]); }
   const total = totalItems + extrasUnicos;
-  return {etiqueta, base, cant:c, subtotal, desc, montoDesc, extras, total, notas, _costeo: (typeof _c!=="undefined")?_c:null};
+  return {etiqueta, base, cant:c, subtotal, desc, montoDesc, extras, total, notas, servicio: coti.servicio, _costeo: (typeof _c!=="undefined")?_c:null};
 }
 
 function renderResultadoCoti(r){
@@ -1933,13 +2010,242 @@ function renderVIP(){
 /* =====================================================================
    NAVEGACIÓN + ARRANQUE
    ===================================================================== */
-const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,pedidos:renderPedidos,ingegr:renderIngEgr,productos:renderProductos,materia:renderMateria,vip:renderVIP};
+/* =====================================================================
+   PROD — Tablero visual de producción con checklists por categoría
+   ===================================================================== */
+
+/* Pasos comunes al inicio de TODOS los pedidos */
+const PROD_PASOS_INICIO = ["Anticipo", "Diseño", "Aprobación del cliente"];
+
+/* Ramas por categoría. Los "servicio" del cotizador coinciden con la
+   categoría del producto personalizado (estampado, bordado, sticker, calcomania, otros). */
+const PROD_PASOS_POR_CAT = {
+  estampado_multicolor: ["Impresión y corte", "Planchado", "Empaquetado", "Envío", "Completado"],
+  bordado:              ["Bordado", "Empaquetado", "Envío", "Completado"],
+  sticker_plantilla:    ["Acomodo", "Impresión", "Corte", "Empaquetado", "Envío", "Completado"],
+  calcomania:           ["Acomodo", "Impresión", "Corte", "Empaquetado", "Envío", "Completado"],
+  otros:                ["Fabricación", "Empaquetado", "Envío", "Completado"]
+};
+
+/* Etiquetas legibles de cada categoría (para los encabezados de rama) */
+const PROD_CAT_NOMBRES = {
+  estampado_multicolor: "🎨 Estampado",
+  bordado:              "🧵 Bordado",
+  sticker_plantilla:    "🏷️ Stickers",
+  calcomania:           "🏷️ Calcomanías",
+  otros:                "🎁 Otros"
+};
+
+/* Mapa servicio-del-cotizador -> categoría (para items del catálogo base) */
+const PROD_SERVICIO_A_CAT = {
+  estampado:  "estampado_multicolor",
+  bordado:    "bordado",
+  sticker:    "sticker_plantilla",
+  calcomania: "calcomania",
+  otros:      "otros",
+  personalizado: null // se resuelve por el categoría del producto custom
+};
+
+/* Devuelve las categorías presentes en un pedido, en orden de aparición y sin duplicados. */
+function prodCategoriasDePedido(v){
+  const cats = [];
+  (v.items||[]).forEach(it=>{
+    let cat = PROD_SERVICIO_A_CAT[it.servicio];
+    // Si es producto personalizado, resolver por su categoría
+    if(!cat && it._costeo && it._costeo.custom && it._costeo.producto){
+      cat = it._costeo.producto.categoria || "otros";
+    }
+    // Fallback: si no supimos qué es (pedidos antiguos), asumir "otros"
+    if(!cat) cat = "otros";
+    if(!cats.includes(cat)) cats.push(cat);
+  });
+  // Si no hay items (pedidos importados de Excel), asumir "otros" como default
+  if(cats.length===0) cats.push("otros");
+  return cats;
+}
+
+/* Devuelve la lista completa de pasos de un pedido, en secciones:
+   [{titulo:"Inicio", pasos:["Anticipo",...]}, {titulo:"🎨 Estampado", pasos:[...]}, ...] */
+function prodPasosDe(v){
+  const secciones = [{titulo:"📋 Inicio", pasos: PROD_PASOS_INICIO}];
+  prodCategoriasDePedido(v).forEach(cat=>{
+    secciones.push({titulo: PROD_CAT_NOMBRES[cat]||cat, pasos: PROD_PASOS_POR_CAT[cat]||PROD_PASOS_POR_CAT.otros});
+  });
+  return secciones;
+}
+
+/* Todos los pasos "aplanados" con clave única "seccion::paso" para persistir en Firestore */
+function prodPasosAplanados(v){
+  const flat = [];
+  prodPasosDe(v).forEach(sec=>{
+    sec.pasos.forEach(p=> flat.push({key: `${sec.titulo}::${p}`, seccion: sec.titulo, paso: p}));
+  });
+  return flat;
+}
+
+/* Calcula progreso: {marcados, total, pct} */
+function prodProgreso(v){
+  const flat = prodPasosAplanados(v);
+  const marcados = v.prodChecks || {};
+  const done = flat.filter(f => marcados[f.key]===true).length;
+  return {marcados: done, total: flat.length, pct: flat.length? Math.round(done/flat.length*100):0};
+}
+
+/* Filtro visual (activos vs completados) */
+let prodFiltro = "activos"; // "activos" | "completados" | "todos"
+
+function renderProd(){
+  const main = $("main");
+  // Todos los pedidos que aún no están marcados como "completado" en el sistema Pedidos,
+  // más aquellos completados recientemente para poder consultarlos.
+  const activos = ventas.filter(v => (v.estadoProd||"activo")==="activo");
+  const completados = ventas.filter(v => v.estadoProd==="completado");
+
+  let lista;
+  if(prodFiltro==="activos") lista = activos;
+  else if(prodFiltro==="completados") lista = completados;
+  else lista = [...activos, ...completados];
+
+  // Ordenar activos: menos completos primero (para que veas primero lo que urge trabajar);
+  // completados: más recientes primero.
+  if(prodFiltro==="activos"){
+    lista.sort((a,b)=> prodProgreso(a).pct - prodProgreso(b).pct);
+  } else {
+    lista.sort((a,b)=> (b.fecha||"").localeCompare(a.fecha||""));
+  }
+
+  let h = `<div class="topbar-desk"><div><h1>🔨 PROD</h1><div class="sub">Tablero de producción · ${activos.length} activos · ${completados.length} terminados</div></div>
+    <div class="acciones-topbar">
+      <button class="btn btn-sm ${prodFiltro==='activos'?'btn-primary':'btn-ghost'}" onclick="__prodFiltro('activos')">Activos (${activos.length})</button>
+      <button class="btn btn-sm ${prodFiltro==='completados'?'btn-primary':'btn-ghost'}" onclick="__prodFiltro('completados')">Terminados (${completados.length})</button>
+      <button class="btn btn-sm ${prodFiltro==='todos'?'btn-primary':'btn-ghost'}" onclick="__prodFiltro('todos')">Todos</button>
+    </div></div>`;
+
+  if(!lista.length){
+    h += `<div class="card" style="text-align:center;padding:40px 20px;color:var(--gris)">
+      <div style="font-size:2.5rem;margin-bottom:10px">🎯</div>
+      <div style="font-weight:700;color:var(--tinta);margin-bottom:6px">Sin pedidos ${prodFiltro==='activos'?'activos':prodFiltro}</div>
+      <div style="font-size:.85rem">${prodFiltro==='activos'?'¡Momento perfecto para descansar o hacer diseños nuevos!':''}</div>
+    </div>`;
+  } else {
+    h += `<div class="prod-lista">`;
+    lista.forEach(v => { h += renderProdCard(v); });
+    h += `</div>`;
+  }
+
+  main.innerHTML = h;
+}
+
+function renderProdCard(v){
+  const prog = prodProgreso(v);
+  const marcados = v.prodChecks || {};
+  const secciones = prodPasosDe(v);
+  const completoTotal = prog.marcados===prog.total && prog.total>0;
+  const yaCompletado = v.estadoProd==="completado";
+
+  let secHtml = "";
+  secciones.forEach(sec=>{
+    secHtml += `<div class="prod-seccion">
+      <div class="prod-seccion-titulo">${sec.titulo}</div>`;
+    sec.pasos.forEach(paso=>{
+      const key = `${sec.titulo}::${paso}`;
+      const checked = marcados[key]===true;
+      secHtml += `<label class="prod-paso ${checked?'done':''}">
+        <input type="checkbox" ${checked?'checked':''} onchange="__prodToggle('${v.id}','${key.replace(/'/g,"\\'")}',this.checked)">
+        <span class="prod-check"><span class="checkmark">✓</span></span>
+        <span class="prod-paso-txt">${paso}</span>
+      </label>`;
+    });
+    secHtml += `</div>`;
+  });
+
+  const productosTxt = v.productos || (v.items||[]).map(it=>`${it.cant}× ${it.etiqueta}`).join(" · ") || "—";
+
+  return `<div class="prod-card ${completoTotal?'terminado':''}" id="prod-${v.id}">
+    <div class="prod-header">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="font-weight:800;font-size:1.05rem">${v.folio||'—'}</div>
+          <div style="font-weight:700;color:var(--tinta)">${v.cliente||'—'}</div>
+          <div style="font-size:.78rem;color:var(--gris)">· ${fmtFecha(v.fecha)}</div>
+          ${yaCompletado?'<span class="pill verde">Terminado</span>':''}
+        </div>
+        <div style="font-size:.82rem;color:var(--gris);margin-top:4px;line-height:1.35">${productosTxt}</div>
+      </div>
+      <div class="prod-progreso">
+        <div class="prod-progreso-circular" style="--pct:${prog.pct}">
+          <div class="prod-pct">${prog.pct}%</div>
+        </div>
+        <div class="prod-progreso-txt">${prog.marcados}/${prog.total}</div>
+      </div>
+    </div>
+    <div class="prod-body">${secHtml}</div>
+  </div>`;
+}
+
+window.__prodFiltro = (f)=>{ prodFiltro = f; renderProd(); };
+
+/* Marca/desmarca un paso, guarda en Firestore, y si TODOS los pasos quedaron marcados
+   (incluyendo "Completado"), marca el pedido como completado en el sistema Pedidos también. */
+window.__prodToggle = async (id, key, checked)=>{
+  const v = ventas.find(x=>x.id===id); if(!v) return;
+  const marcados = {...(v.prodChecks||{})};
+  if(checked) marcados[key] = true; else delete marcados[key];
+
+  // Animar el paso localmente antes de esperar a Firestore
+  const cardEl = document.getElementById(`prod-${id}`);
+  if(cardEl){
+    const label = cardEl.querySelector(`input[onchange*="${key.replace(/\\'/g,"\\\\'").replace(/'/g,"\\'")}"]`);
+    if(label){
+      const paso = label.closest(".prod-paso");
+      if(paso){
+        paso.classList.toggle("done", checked);
+        if(checked) paso.classList.add("celebrando");
+        setTimeout(()=>paso.classList.remove("celebrando"), 500);
+      }
+    }
+  }
+
+  // Chequear si con este toggle quedaron todos los pasos marcados
+  const flat = prodPasosAplanados(v);
+  const totalMarcados = flat.filter(f => marcados[f.key]===true).length;
+  const todosCompletos = totalMarcados === flat.length && flat.length > 0;
+
+  const updates = {prodChecks: marcados};
+  // Si todos los pasos quedan marcados, mover el pedido a "completado" automáticamente
+  if(todosCompletos && v.estadoProd!=="completado"){
+    let horas = null;
+    const inicioStr = v.inicioProd || v.fecha;
+    if(inicioStr){
+      const inicio = new Date(inicioStr.length>10 ? inicioStr : inicioStr+"T00:00:00");
+      horas = (Date.now()-inicio.getTime())/3600000;
+      if(horas<0) horas=0;
+    }
+    updates.estadoProd = "completado";
+    updates.fechaCompletado = hoy();
+    updates.horasProduccion = horas;
+    setTimeout(()=>toast(`🎉 ¡${v.folio} completado!`), 200);
+  }
+  // Si estaba completado y ahora se desmarcó algo, reabrirlo
+  if(!todosCompletos && v.estadoProd==="completado"){
+    updates.estadoProd = "activo";
+    updates.fechaCompletado = null;
+    updates.horasProduccion = null;
+  }
+
+  await updateDoc(doc(db,"ventas",id), updates);
+  // La UI se refrescará automáticamente por el listener de Firestore (wire),
+  // pero como el listener puede tardar unos ms, ya animamos localmente arriba.
+};
+
+const VISTAS={dashboard:renderDashboard,cotizar:iniciarCoti,pedidos:renderPedidos,ingegr:renderIngEgr,productos:renderProductos,materia:renderMateria,vip:renderVIP,prod:renderProd};
+
 function irVista(v,_desdeHistorial){
   vistaActual=v;
   Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={};
   document.querySelectorAll(".nav-item[data-vista]").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
   document.querySelectorAll(".botnav .b[data-vista]").forEach(b=>b.classList.toggle("activo",b.dataset.vista===v));
-  const esMas=["productos","materia","vip"].includes(v);
+  const esMas=["productos","materia","vip","prod"].includes(v);
   const btnMas=$("btnMas"); if(btnMas) btnMas.classList.toggle("activo",esMas);
   (VISTAS[v]||renderDashboard)();
   window.scrollTo(0,0);
@@ -1955,6 +2261,7 @@ document.querySelectorAll("[data-vista]").forEach(b=>b.onclick=()=>irVista(b.dat
 $("btnMas").onclick=()=>{
   abrirModal(`<button class="modal-close" onclick="__cerrar()">✕</button><h2>Más opciones</h2><div class="msub">Otras secciones de CreatiBox</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+      <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('prod')">🔨 PROD — Producción</button>
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('productos')">📦 Productos</button>
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('materia')">🧵 Materia Prima</button>
       <button class="menu-item-like btn btn-ghost btn-block" style="justify-content:flex-start" onclick="__irVistaYCerrar('vip')">⭐ VIP — Referidos</button>
